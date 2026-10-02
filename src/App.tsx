@@ -1,11 +1,10 @@
-import { useState } from 'react'
 import heroImg from './assets/hero.png'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import './App.css'
+import Counter from "./Counter";
 
 function App() {
-  const [count, setCount] = useState(0)
 
   return (
     <>
@@ -21,20 +20,12 @@ function App() {
             Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
         </div>
-        <button
-            type="button"
-            className="counter"
-            onClick={() => setCount( 0)}
-        >
-          Reset
-        </button>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 2)}
-        >
-          Count is {count}
-        </button>
+        <div>
+          <Counter label="Test Counter 1" step={1}/>
+          <Counter label="Test Counter 3" step={3}/>
+          <Counter label="Test Counter 5" step={5}/>
+          <Counter label="Test Counter 10" step={10} start={100}/>
+        </div>
       </section>
 
       <div className="ticks"></div>
