@@ -4,51 +4,19 @@ import viteLogo from './assets/vite.svg'
 import './App.css'
 import Counter from "./Counter";
 import {useState} from "react"
-import {type CounterItem, isCounterItems, isString} from './types'
-import {useLocalStorage} from "./useLocalStorage";
+import {useCounters} from "./useCounters.ts";
+import {useLocalStorage} from "./useLocalStorage.ts";
 
-
-const initialItems: CounterItem[] = [
-    { id: crypto.randomUUID(), label: 'Ones', step: 1, start: 0, count: 0 },
-    { id: crypto.randomUUID(), label: 'Threes', step: 3, start: 0, count: 0 },
-    { id: crypto.randomUUID(), label: 'Fives', step: 5, start: 0, count: 0 },
-    { id: crypto.randomUUID(), label: 'Tens', step: 10, start: 100, count: 100 },
-]
-
-
-
-
+function isString(value: unknown): value is string {
+  return typeof value === 'string'
+}
 
 function App() {
   const [label, setLabel] = useState('')
   const [stepText, setStepText] = useState('')   // a string: input values are always text
   const [error, setError] = useState<string | null>(null)
+  const { items, total, increment, reset, remove, add } = useCounters()
   const [title, setTitle] = useLocalStorage('title', 'My counters', isString)
-  const [items, setItems] = useLocalStorage('counters', initialItems, isCounterItems)
-
-  const total = items.reduce((sum, item) => sum + item.count, 0)
-
-  function increment(id: string) {
-    setItems(prev =>
-        prev.map(item => (item.id === id ? { ...item, count: item.count + item.step } : item))
-    )
-  }
-
-  function reset(id: string) {
-    setItems(prev =>
-        prev.map(item => (item.id === id ? { ...item, count: item.start} : item))
-    )
-  }
-
-  function remove(id: string) {
-    setItems(prev =>
-        prev.filter(item => item.id !== id)
-    )
-  }
-
-  function add(newItem: CounterItem) {
-    setItems(prev => [...prev, newItem])
-  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -61,14 +29,8 @@ function App() {
       setError('Label is required')
       return;
     }
-    const item: CounterItem = {
-      id: crypto.randomUUID(),
-      label: label.trim(),
-      step: step,
-      start: 0,
-      count: 0,
-    }
-    add(item);
+
+    add(label.trim(), step);
     setLabel('')
     setStepText('')
     setError(null);
@@ -83,7 +45,7 @@ function App() {
           <img src={viteLogo} className="vite" alt="Vite logo" />
         </div>
         <div>
-          <h1>{title}</h1>
+          <h1>{title || "Unknown"}</h1>
           <p>
             Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
