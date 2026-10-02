@@ -3,7 +3,7 @@ import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import './App.css'
 import Counter from "./Counter";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 
 type CounterItem = {
   id: string
@@ -20,11 +20,41 @@ const initialItems: CounterItem[] = [
     { id: crypto.randomUUID(), label: 'Tens', step: 10, start: 100, count: 100 },
 ]
 
+function loadItems(): CounterItem[] {
+  const result = localStorage.getItem('counters')
+  if (result === null) {
+    return initialItems
+  }
+  try {
+    const data: unknown = JSON.parse(result)
+    if (Array.isArray(data) && data.every(isCounterItem)) {
+      return data   // TypeScript now knows this is CounterItem[]
+    }
+    return initialItems
+  } catch {
+    return initialItems;
+  }
+}
+
+function isCounterItem(value: unknown): value is CounterItem {
+  return typeof value === 'object'
+      && value !== null
+      && 'id' in value && typeof value.id === 'string'
+      && 'label' in value && typeof value.label === 'string'
+      && 'count' in value && typeof value.count === 'number'
+      && 'start' in value && typeof value.start === 'number'
+      && 'step' in value && typeof value.step === 'number';
+
+}
+
 function App() {
-  const [items, setItems] = useState<CounterItem[]>(initialItems)
+  const [items, setItems] = useState<CounterItem[]>( () => loadItems())
   const [label, setLabel] = useState('')
   const [stepText, setStepText] = useState('')   // a string: input values are always text
   const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    localStorage.setItem('counters', JSON.stringify(items))
+  }, [items])
   const total = items.reduce((sum, item) => sum + item.count, 0)
 
   function increment(id: string) {
