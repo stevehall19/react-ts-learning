@@ -10,7 +10,7 @@ describe('useCounters', () => {
         expect(result.current.items.map(i => i.label)).toEqual(['Ones', 'Threes', 'Fives', 'Tens'])
     })
 
-    test('test dynamic total', () => {
+    test('total adds up all counts', () => {
         const { result } = renderHook(() => useCounters())
 
         const tens = result.current.items.find(i => i.label === 'Tens')!
@@ -22,7 +22,7 @@ describe('useCounters', () => {
         expect(result.current.total).toBe(114)
     })
 
-    test('increment tens', () => {
+    test('increment adds the counters step', () => {
         const { result } = renderHook(() => useCounters())
 
         const tens = result.current.items.find(i => i.label === 'Tens')!
@@ -31,11 +31,23 @@ describe('useCounters', () => {
         expect(result.current.items.find(i => i.id === tens.id)?.count).toBe(120)
     })
 
-    test('add one', () => {
+    test('reset returns the count to its starting value', () => {
+        const { result } = renderHook(() => useCounters())
+
+        const tens = result.current.items.find(i => i.label === 'Tens')!
+        act(() => result.current.increment(tens.id))
+        act(() => result.current.increment(tens.id))
+        act(() => result.current.reset(tens.id))
+        expect(result.current.items.find(i => i.id === tens.id)?.count).toBe(100)
+    })
+
+    test('add creates a counter starting at its start value', () => {
         const { result } = renderHook(() => useCounters())
 
         act(() => result.current.add('Big', 10, 100))
 
+        const big = result.current.items.find(i => i.label === 'Big')!
+        expect(big.count).toBe(100)
         expect(result.current.items.map(i => i.label)).toEqual(['Ones', 'Threes', 'Fives', 'Tens', 'Big'])
 
     })
