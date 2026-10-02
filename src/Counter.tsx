@@ -4,9 +4,10 @@ type CounterProps = {
     count: number                 // the parent now owns this value
     onIncrement: () => void       // a function with no arguments that returns nothing
     onReset: () => void
+    onRemove: () => void
 }
 
-function Counter({ label, count, onIncrement, onReset }: CounterProps) {
+function Counter({ label, count, onIncrement, onReset, onRemove }: CounterProps) {
     return <div>
         <button
             type="button"
@@ -21,6 +22,13 @@ function Counter({ label, count, onIncrement, onReset }: CounterProps) {
             onClick={() => onIncrement()}
         >
         {label} is {count}
+        </button>
+        <button
+            type="button"
+            className="counter"
+            onClick={() => onRemove()}
+        >
+            X
         </button>
     </div>
 

@@ -5,26 +5,68 @@ import './App.css'
 import Counter from "./Counter";
 import {useState} from "react";
 
-type CounterConfig = { label: string; step: number; start: number }
+type CounterItem = {
+  id: string
+  label: string
+  step: number
+  start: number
+  count: number
+}
 
-const counters: CounterConfig[] = [
-  { label: 'Ones', step: 1, start: 0 },
-  { label: 'Threes', step: 3, start: 0 },
-  { label: 'Fives', step: 5, start: 0 },
-  { label: 'Tens', step: 10, start: 100 },
+const initialItems: CounterItem[] = [
+    { id: crypto.randomUUID(), label: 'Ones', step: 1, start: 0, count: 0 },
+    { id: crypto.randomUUID(), label: 'Threes', step: 3, start: 0, count: 0 },
+    { id: crypto.randomUUID(), label: 'Fives', step: 5, start: 0, count: 0 },
+    { id: crypto.randomUUID(), label: 'Tens', step: 10, start: 100, count: 100 },
 ]
 
 function App() {
-  const [counts, setCounts] = useState(counters.map(c => c.start))   // TypeScript infers number[]
-  const total = counts.reduce((a, b) => a + b, 0)
+  const [items, setItems] = useState<CounterItem[]>(initialItems)
+  const [label, setLabel] = useState('')
+  const [stepText, setStepText] = useState('')   // a string: input values are always text
+  const total = items.reduce((sum, item) => sum + item.count, 0)
 
-  function increment(index: number, step: number) {
-    setCounts(prev => prev.map((c, i) => (i === index ? c + step : c)))
+  function increment(id: string) {
+    setItems(prev =>
+        prev.map(item => (item.id === id ? { ...item, count: item.count + item.step } : item))
+    )
   }
 
-  function reset(index: number, start: number) {
-    // use setCounts to make a new array where position `index` is set back to `start`
-    setCounts(prev => prev.map((c, i) => (i === index ? start : c)))
+  function reset(id: string) {
+    setItems(prev =>
+        prev.map(item => (item.id === id ? { ...item, count: item.start} : item))
+    )
+  }
+
+  function remove(id: string) {
+    setItems(prev =>
+        prev.filter(item => item.id !== id)
+    )
+  }
+
+  function add(newItem: CounterItem) {
+    setItems(prev => [...prev, newItem])
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const step = Number(stepText)
+    if (Number.isNaN(step)) {
+      return;
+    }
+    if (label === null || label.trim() === '') {
+      return;
+    }
+    const item: CounterItem = {
+      id: crypto.randomUUID(),
+      label: label,
+      step: step,
+      start: 0,
+      count: 0,
+    }
+    add(item);
+    setLabel('')
+    setStepText('')
   }
 
   return (
@@ -43,13 +85,27 @@ function App() {
           <p>
             Total: {total}
           </p>
+          <div>
+            <form onSubmit={handleSubmit}>
+              <input placeholder="label" value={label} onChange={e => setLabel(e.target.value)} />
+              <input placeholder="step"  value={stepText} onChange={e => setStepText(e.target.value)} />
+              <button
+                  type="submit"
+                  className="counter">
+                Add
+              </button>
+            </form>
+          </div>
         </div>
+
         <div>
-          {counters.map((cfg, i) => <Counter key={cfg.label}
-                                             label={cfg.label}
-                                             count={counts[i]}
-                                             onIncrement={ () => increment(i, cfg.step)}
-                                             onReset={ () => reset(i, cfg.start)}/>)}
+
+          {items.map(item => <Counter key={item.id}
+                                             label={item.label}
+                                             count={item.count}
+                                             onIncrement={ () => increment(item.id)}
+                                             onReset={ () => reset(item.id)}
+                                             onRemove={() => remove(item.id)}/>)}
         </div>
       </section>
 
