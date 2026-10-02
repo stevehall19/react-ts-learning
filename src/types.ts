@@ -18,5 +18,7 @@ export function isCounterItem(value: unknown): value is CounterItem {
         && 'label' in value && typeof value.label === 'string'
         && 'count' in value && typeof value.count === 'number'
         && 'start' in value && typeof value.start === 'number'
-        && 'step' in value && typeof value.step === 'number';
+        && 'step' in value && typeof value.step === 'number'
+        && Number.isInteger(value.step)
+        && value.step > 0;
 }
