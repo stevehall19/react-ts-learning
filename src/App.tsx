@@ -24,6 +24,7 @@ function App() {
   const [items, setItems] = useState<CounterItem[]>(initialItems)
   const [label, setLabel] = useState('')
   const [stepText, setStepText] = useState('')   // a string: input values are always text
+  const [error, setError] = useState<string | null>(null)
   const total = items.reduce((sum, item) => sum + item.count, 0)
 
   function increment(id: string) {
@@ -51,15 +52,17 @@ function App() {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const step = Number(stepText)
-    if (Number.isNaN(step)) {
+    if (!Number.isInteger(step) || step <= 0) {
+      setError('Step must be a whole number above 0')
       return;
     }
-    if (label === null || label.trim() === '') {
+    if (label.trim() === '') {
+      setError('Label is required')
       return;
     }
     const item: CounterItem = {
       id: crypto.randomUUID(),
-      label: label,
+      label: label.trim(),
       step: step,
       start: 0,
       count: 0,
@@ -67,6 +70,7 @@ function App() {
     add(item);
     setLabel('')
     setStepText('')
+    setError(null);
   }
 
   return (
@@ -86,9 +90,10 @@ function App() {
             Total: {total}
           </p>
           <div>
+            {error && <p className="error">{error}</p>}
             <form onSubmit={handleSubmit}>
-              <input placeholder="label" value={label} onChange={e => setLabel(e.target.value)} />
-              <input placeholder="step"  value={stepText} onChange={e => setStepText(e.target.value)} />
+              <input placeholder="label" required value={label} onChange={e => setLabel(e.target.value)} />
+              <input placeholder="step"  type='number' value={stepText} onChange={e => setStepText(e.target.value)} />
               <button
                   type="submit"
                   className="counter">
