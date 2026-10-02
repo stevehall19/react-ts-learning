@@ -5,8 +5,17 @@ import './App.css'
 import Counter from "./Counter";
 import {useState} from "react";
 
+type CounterConfig = { label: string; step: number; start: number }
+
+const counters: CounterConfig[] = [
+  { label: 'Ones', step: 1, start: 0 },
+  { label: 'Threes', step: 3, start: 0 },
+  { label: 'Fives', step: 5, start: 0 },
+  { label: 'Tens', step: 10, start: 100 },
+]
+
 function App() {
-  const [counts, setCounts] = useState([0, 0, 0, 100])   // TypeScript infers number[]
+  const [counts, setCounts] = useState(counters.map(c => c.start))   // TypeScript infers number[]
   const total = counts.reduce((a, b) => a + b, 0)
 
   function increment(index: number, step: number) {
@@ -32,26 +41,15 @@ function App() {
             Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
           <p>
-            {total}
+            Total: {total}
           </p>
         </div>
         <div>
-          <Counter label="Test Counter 1"
-                   count={counts[0]}
-                   onIncrement={ () => increment(0, 1)}
-                   onReset={ () => reset(0, 0)}/>
-          <Counter label="Test Counter 3"
-                   count={counts[1]}
-                   onIncrement={ () => increment(1, 3)}
-                   onReset={ () => reset(1, 0)}/>
-          <Counter label="Test Counter 5"
-                   count={counts[2]}
-                   onIncrement={ () => increment(2, 5)}
-                   onReset={ () => reset(2, 0)}/>
-          <Counter label="Test Counter 10"
-                   count={counts[3]}
-                   onIncrement={ () => increment(3, 10)}
-                   onReset={ () => reset(3, 100)}/>
+          {counters.map((cfg, i) => <Counter key={cfg.label}
+                                             label={cfg.label}
+                                             count={counts[i]}
+                                             onIncrement={ () => increment(i, cfg.step)}
+                                             onReset={ () => reset(i, cfg.start)}/>)}
         </div>
       </section>
 
