@@ -3,8 +3,20 @@ import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import './App.css'
 import Counter from "./Counter";
+import {useState} from "react";
 
 function App() {
+  const [counts, setCounts] = useState([0, 0, 0, 100])   // TypeScript infers number[]
+  const total = counts.reduce((a, b) => a + b, 0)
+
+  function increment(index: number, step: number) {
+    setCounts(prev => prev.map((c, i) => (i === index ? c + step : c)))
+  }
+
+  function reset(index: number, start: number) {
+    // use setCounts to make a new array where position `index` is set back to `start`
+    setCounts(prev => prev.map((c, i) => (i === index ? start : c)))
+  }
 
   return (
     <>
@@ -19,12 +31,27 @@ function App() {
           <p>
             Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
+          <p>
+            {total}
+          </p>
         </div>
         <div>
-          <Counter label="Test Counter 1" step={1}/>
-          <Counter label="Test Counter 3" step={3}/>
-          <Counter label="Test Counter 5" step={5}/>
-          <Counter label="Test Counter 10" step={10} start={100}/>
+          <Counter label="Test Counter 1"
+                   count={counts[0]}
+                   onIncrement={ () => increment(0, 1)}
+                   onReset={ () => reset(0, 0)}/>
+          <Counter label="Test Counter 3"
+                   count={counts[1]}
+                   onIncrement={ () => increment(1, 3)}
+                   onReset={ () => reset(1, 0)}/>
+          <Counter label="Test Counter 5"
+                   count={counts[2]}
+                   onIncrement={ () => increment(2, 5)}
+                   onReset={ () => reset(2, 0)}/>
+          <Counter label="Test Counter 10"
+                   count={counts[3]}
+                   onIncrement={ () => increment(3, 10)}
+                   onReset={ () => reset(3, 100)}/>
         </div>
       </section>
 

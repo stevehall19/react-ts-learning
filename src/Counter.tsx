@@ -1,25 +1,24 @@
-import {useState} from "react";
 
 type CounterProps = {
     label: string
-    step: number
-    start?: number
+    count: number                 // the parent now owns this value
+    onIncrement: () => void       // a function with no arguments that returns nothing
+    onReset: () => void
 }
 
-function Counter({ label, step, start = 0}: CounterProps) {
-    const [count, setCount] = useState(start)
+function Counter({ label, count, onIncrement, onReset }: CounterProps) {
     return <div>
         <button
             type="button"
             className="counter"
-            onClick={() => setCount(start)}
+            onClick={() => onReset()}
         >
             Reset
         </button>
         <button
             type="button"
             className="counter"
-            onClick={() => setCount((count) => count + step)}
+            onClick={() => onIncrement()}
         >
         {label} is {count}
         </button>
