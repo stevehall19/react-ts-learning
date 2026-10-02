@@ -20,3 +20,7 @@ export function isCounterItem(value: unknown): value is CounterItem {
         && 'start' in value && typeof value.start === 'number'
         && 'step' in value && typeof value.step === 'number';
 }
+
+export function isString(value: unknown): value is string {
+    return typeof value === 'string'
+}

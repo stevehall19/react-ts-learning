@@ -4,8 +4,8 @@ import viteLogo from './assets/vite.svg'
 import './App.css'
 import Counter from "./Counter";
 import {useState} from "react"
-import {type CounterItem, isCounterItems} from './types'
-import {useLocalStorage} from "./useLocalStorage.ts";
+import {type CounterItem, isCounterItems, isString} from './types'
+import {useLocalStorage} from "./useLocalStorage";
 
 
 const initialItems: CounterItem[] = [
@@ -23,7 +23,7 @@ function App() {
   const [label, setLabel] = useState('')
   const [stepText, setStepText] = useState('')   // a string: input values are always text
   const [error, setError] = useState<string | null>(null)
-
+  const [title, setTitle] = useLocalStorage('title', 'My counters', isString)
   const [items, setItems] = useLocalStorage('counters', initialItems, isCounterItems)
 
   const total = items.reduce((sum, item) => sum + item.count, 0)
@@ -83,7 +83,7 @@ function App() {
           <img src={viteLogo} className="vite" alt="Vite logo" />
         </div>
         <div>
-          <h1>something of your own</h1>
+          <h1>{title}</h1>
           <p>
             Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
@@ -91,10 +91,12 @@ function App() {
             Total: {total}
           </p>
           <div>
+            <input placeholder="title"  value={title} onChange={e => setTitle(e.target.value)}/>
             {error && <p className="error">{error}</p>}
             <form onSubmit={handleSubmit}>
               <input placeholder="label" required value={label} onChange={e => setLabel(e.target.value)} />
               <input placeholder="step"  type='number' value={stepText} onChange={e => setStepText(e.target.value)} />
+
               <button
                   type="submit"
                   className="counter">
