@@ -1,4 +1,24 @@
 
+export type Preset = {
+    label: string
+    step: number
+    start: number
+}
+
+export function isPresets(value: unknown): value is Preset[] {
+    return (Array.isArray(value) && value.every(isPreset));
+}
+
+export function isPreset(value: unknown): value is Preset {
+    return typeof value === 'object'
+        && value !== null
+        && 'label' in value && typeof value.label === 'string'
+        && 'start' in value && typeof value.start === 'number'
+        && 'step' in value && typeof value.step === 'number'
+        && Number.isInteger(value.step)
+        && value.step > 0;
+}
+
 export type CounterItem = {
     id: string
     label: string

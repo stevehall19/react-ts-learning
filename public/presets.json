@@ -1,0 +1,6 @@
+[
+  { "label": "Sevens", "step": 7, "start": 0 },
+  { "label": "Dozens", "step": 12, "start": 0 },
+  { "label": "Hundreds", "step": 100, "start": 0 },
+  { "label": "From a thousand", "step": 1, "start": 1000 }
+]
