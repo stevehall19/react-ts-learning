@@ -17,13 +17,17 @@ function Counter({
 }: CounterProps) {
   return (
     <div>
-      <Button type="button" className="counter" onClick={() => onReset()}>
+      <Button type="button" onClick={() => onReset()}>
         Reset
       </Button>
-      <Button type="button" className="counter" onClick={() => onIncrement()}>
+      <Button type="button" onClick={() => onIncrement()}>
         {label} is {count}
       </Button>
-      <Button className="text-slate-400 hover:text-red-600" onClick={onRemove}>
+      <Button
+        variant="danger"
+        aria-label={`Remove ${label}`}
+        onClick={onRemove}
+      >
         ✕
       </Button>
     </div>

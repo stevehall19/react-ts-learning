@@ -5,6 +5,7 @@ import { useLocalStorage } from './useLocalStorage'
 import { useFetch } from './useFetch'
 import { isPresets } from './types'
 import { Button } from './Button'
+import { Input } from './Input'
 
 function isString(value: unknown): value is string {
   return typeof value === 'string'
@@ -42,27 +43,27 @@ function App() {
         <h1 className="text-3xl font-bold">{title || 'Unknown'}</h1>
         <p className="text-gray-800">Total: {total}</p>
         <div>
-          <input
+          <Input
             placeholder="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
-          {error && <p className="error">{error}</p>}
-          <form onSubmit={handleSubmit}>
-            <input
+          {error && <p className="text-red-600">{error}</p>}
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <Input
               placeholder="label"
               required
               value={label}
               onChange={(e) => setLabel(e.target.value)}
             />
-            <input
+            <Input
               placeholder="step"
               type="number"
               value={stepText}
               onChange={(e) => setStepText(e.target.value)}
             />
 
-            <Button type="submit" className="counter">
+            <Button type="submit" variant="primary">
               Add
             </Button>
           </form>
@@ -74,7 +75,6 @@ function App() {
         <div>
           {presets.data.map((preset) => (
             <Button
-              type="button"
               key={preset.label}
               onClick={() => add(preset.label, preset.step, preset.start)}
             >
