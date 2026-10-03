@@ -4,8 +4,10 @@ import viteLogo from './assets/vite.svg'
 import './App.css'
 import Counter from "./Counter";
 import {useState} from "react"
-import {useCounters} from "./useCounters.ts";
-import {useLocalStorage} from "./useLocalStorage.ts";
+import {useCounters} from "./useCounters";
+import {useLocalStorage} from "./useLocalStorage";
+import {useFetch} from "./useFetch";
+import {isPresets} from "./types";
 
 function isString(value: unknown): value is string {
   return typeof value === 'string'
@@ -17,6 +19,7 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const { items, total, increment, reset, remove, add } = useCounters()
   const [title, setTitle] = useLocalStorage('title', 'My counters', isString)
+  const presets = useFetch('/presets.json', isPresets)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -67,7 +70,21 @@ function App() {
             </form>
           </div>
         </div>
-
+        {presets.status === 'loading' && <p>Loading presets…</p>}
+        {presets.status === 'error' && <p className="error">{presets.error}</p>}
+        {presets.status === 'success' && (
+            <div>
+              {presets.data.map(preset => (
+                  <button
+                      type="button"
+                      className="counter"
+                      key={preset.label}
+                      onClick={() => add(preset.label, preset.step, preset.start)}>
+                    + {preset.label}
+                  </button>
+              ))}
+            </div>
+        )}
         <div>
 
           {items.map(item => <Counter key={item.id}
