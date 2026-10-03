@@ -3,62 +3,75 @@ import { renderHook, act } from '@testing-library/react'
 import { useCounters } from './useCounters'
 
 describe('useCounters', () => {
+  test('starts with the four default counters', () => {
+    const { result } = renderHook(() => useCounters())
 
-    test('starts with the four default counters', () => {
-        const { result } = renderHook(() => useCounters())
+    expect(result.current.items.map((i) => i.label)).toEqual([
+      'Ones',
+      'Threes',
+      'Fives',
+      'Tens',
+    ])
+  })
 
-        expect(result.current.items.map(i => i.label)).toEqual(['Ones', 'Threes', 'Fives', 'Tens'])
-    })
+  test('total adds up all counts', () => {
+    const { result } = renderHook(() => useCounters())
 
-    test('total adds up all counts', () => {
-        const { result } = renderHook(() => useCounters())
+    const tens = result.current.items.find((i) => i.label === 'Tens')!
+    const threes = result.current.items.find((i) => i.label === 'Threes')!
+    const ones = result.current.items.find((i) => i.label === 'Ones')!
+    act(() => result.current.increment(tens.id))
+    act(() => result.current.increment(threes.id))
+    act(() => result.current.increment(ones.id))
+    expect(result.current.total).toBe(114)
+  })
 
-        const tens = result.current.items.find(i => i.label === 'Tens')!
-        const threes = result.current.items.find(i => i.label === 'Threes')!
-        const ones = result.current.items.find(i => i.label === 'Ones')!
-        act(() => result.current.increment(tens.id))
-        act(() => result.current.increment(threes.id))
-        act(() => result.current.increment(ones.id))
-        expect(result.current.total).toBe(114)
-    })
+  test('increment adds the counters step', () => {
+    const { result } = renderHook(() => useCounters())
 
-    test('increment adds the counters step', () => {
-        const { result } = renderHook(() => useCounters())
+    const tens = result.current.items.find((i) => i.label === 'Tens')!
+    act(() => result.current.increment(tens.id))
+    act(() => result.current.increment(tens.id))
+    expect(result.current.items.find((i) => i.id === tens.id)?.count).toBe(120)
+  })
 
-        const tens = result.current.items.find(i => i.label === 'Tens')!
-        act(() => result.current.increment(tens.id))
-        act(() => result.current.increment(tens.id))
-        expect(result.current.items.find(i => i.id === tens.id)?.count).toBe(120)
-    })
+  test('reset returns the count to its starting value', () => {
+    const { result } = renderHook(() => useCounters())
 
-    test('reset returns the count to its starting value', () => {
-        const { result } = renderHook(() => useCounters())
+    const tens = result.current.items.find((i) => i.label === 'Tens')!
+    act(() => result.current.increment(tens.id))
+    act(() => result.current.increment(tens.id))
+    act(() => result.current.reset(tens.id))
+    expect(result.current.items.find((i) => i.id === tens.id)?.count).toBe(100)
+  })
 
-        const tens = result.current.items.find(i => i.label === 'Tens')!
-        act(() => result.current.increment(tens.id))
-        act(() => result.current.increment(tens.id))
-        act(() => result.current.reset(tens.id))
-        expect(result.current.items.find(i => i.id === tens.id)?.count).toBe(100)
-    })
+  test('add creates a counter starting at its start value', () => {
+    const { result } = renderHook(() => useCounters())
 
-    test('add creates a counter starting at its start value', () => {
-        const { result } = renderHook(() => useCounters())
+    act(() => result.current.add('Big', 10, 100))
 
-        act(() => result.current.add('Big', 10, 100))
+    const big = result.current.items.find((i) => i.label === 'Big')!
+    expect(big.count).toBe(100)
+    expect(result.current.items.map((i) => i.label)).toEqual([
+      'Ones',
+      'Threes',
+      'Fives',
+      'Tens',
+      'Big',
+    ])
+  })
 
-        const big = result.current.items.find(i => i.label === 'Big')!
-        expect(big.count).toBe(100)
-        expect(result.current.items.map(i => i.label)).toEqual(['Ones', 'Threes', 'Fives', 'Tens', 'Big'])
+  test('remove takes out exactly that counter', () => {
+    const { result } = renderHook(() => useCounters())
 
-    })
+    const threes = result.current.items.find((i) => i.label === 'Threes')!
 
-    test('remove takes out exactly that counter', () => {
-        const { result } = renderHook(() => useCounters())
+    act(() => result.current.remove(threes.id))
 
-        const threes = result.current.items.find(i => i.label === 'Threes')!
-
-        act(() => result.current.remove(threes.id))
-
-        expect(result.current.items.map(i => i.label)).toEqual(['Ones', 'Fives', 'Tens'])
-    })
+    expect(result.current.items.map((i) => i.label)).toEqual([
+      'Ones',
+      'Fives',
+      'Tens',
+    ])
+  })
 })

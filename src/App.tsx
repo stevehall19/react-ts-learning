@@ -2,12 +2,12 @@ import heroImg from './assets/hero.png'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import './App.css'
-import Counter from "./Counter";
-import {useState} from "react"
-import {useCounters} from "./useCounters";
-import {useLocalStorage} from "./useLocalStorage";
-import {useFetch} from "./useFetch";
-import {isPresets} from "./types";
+import Counter from './Counter'
+import { useState } from 'react'
+import { useCounters } from './useCounters'
+import { useLocalStorage } from './useLocalStorage'
+import { useFetch } from './useFetch'
+import { isPresets } from './types'
 
 function isString(value: unknown): value is string {
   return typeof value === 'string'
@@ -15,7 +15,7 @@ function isString(value: unknown): value is string {
 
 function App() {
   const [label, setLabel] = useState('')
-  const [stepText, setStepText] = useState('')   // a string: input values are always text
+  const [stepText, setStepText] = useState('') // a string: input values are always text
   const [error, setError] = useState<string | null>(null)
   const { items, total, increment, reset, remove, add } = useCounters()
   const [title, setTitle] = useLocalStorage('title', 'My counters', isString)
@@ -26,17 +26,17 @@ function App() {
     const step = Number(stepText)
     if (!Number.isInteger(step) || step <= 0) {
       setError('Step must be a whole number above 0')
-      return;
+      return
     }
     if (label.trim() === '') {
       setError('Label is required')
-      return;
+      return
     }
 
-    add(label.trim(), step);
+    add(label.trim(), step)
     setLabel('')
     setStepText('')
-    setError(null);
+    setError(null)
   }
 
   return (
@@ -48,23 +48,33 @@ function App() {
           <img src={viteLogo} className="vite" alt="Vite logo" />
         </div>
         <div>
-          <h1>{title || "Unknown"}</h1>
+          <h1>{title || 'Unknown'}</h1>
           <p>
             Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
-          <p>
-            Total: {total}
-          </p>
+          <p>Total: {total}</p>
           <div>
-            <input placeholder="title"  value={title} onChange={e => setTitle(e.target.value)}/>
+            <input
+              placeholder="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
             {error && <p className="error">{error}</p>}
             <form onSubmit={handleSubmit}>
-              <input placeholder="label" required value={label} onChange={e => setLabel(e.target.value)} />
-              <input placeholder="step"  type='number' value={stepText} onChange={e => setStepText(e.target.value)} />
+              <input
+                placeholder="label"
+                required
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+              />
+              <input
+                placeholder="step"
+                type="number"
+                value={stepText}
+                onChange={(e) => setStepText(e.target.value)}
+              />
 
-              <button
-                  type="submit"
-                  className="counter">
+              <button type="submit" className="counter">
                 Add
               </button>
             </form>
@@ -73,26 +83,30 @@ function App() {
         {presets.status === 'loading' && <p>Loading presets…</p>}
         {presets.status === 'error' && <p className="error">{presets.error}</p>}
         {presets.status === 'success' && (
-            <div>
-              {presets.data.map(preset => (
-                  <button
-                      type="button"
-                      className="counter"
-                      key={preset.label}
-                      onClick={() => add(preset.label, preset.step, preset.start)}>
-                    + {preset.label}
-                  </button>
-              ))}
-            </div>
+          <div>
+            {presets.data.map((preset) => (
+              <button
+                type="button"
+                className="counter"
+                key={preset.label}
+                onClick={() => add(preset.label, preset.step, preset.start)}
+              >
+                + {preset.label}
+              </button>
+            ))}
+          </div>
         )}
         <div>
-
-          {items.map(item => <Counter key={item.id}
-                                             label={item.label}
-                                             count={item.count}
-                                             onIncrement={ () => increment(item.id)}
-                                             onReset={ () => reset(item.id)}
-                                             onRemove={() => remove(item.id)}/>)}
+          {items.map((item) => (
+            <Counter
+              key={item.id}
+              label={item.label}
+              count={item.count}
+              onIncrement={() => increment(item.id)}
+              onReset={() => reset(item.id)}
+              onRemove={() => remove(item.id)}
+            />
+          ))}
         </div>
       </section>
 
