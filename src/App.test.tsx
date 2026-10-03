@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 
@@ -26,7 +26,7 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: '+ Sevens' }))
 
     expect(
-      screen.getByRole('button', { name: /Sevens is 0/ }),
+      screen.getByRole('button', { name: /Increment Sevens/ }),
     ).toBeInTheDocument()
   })
 
@@ -34,11 +34,10 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: /Ones is 0/ }))
+    await user.click(screen.getByRole('button', { name: /Increment Ones/ }))
 
-    expect(
-      screen.getByRole('button', { name: /Ones is 1/ }),
-    ).toBeInTheDocument()
+    const onesCard = screen.getByRole('group', { name: 'Ones' })
+    expect(within(onesCard).getByText('1')).toBeInTheDocument()
     expect(screen.getByText('Total: 101'))
   })
 
@@ -50,11 +49,10 @@ describe('App', () => {
     await user.type(screen.getByPlaceholderText('step'), '7')
     await user.click(screen.getByRole('button', { name: 'Add' }))
 
-    await user.click(screen.getByRole('button', { name: /Sevens is 0/ }))
+    await user.click(screen.getByRole('button', { name: /Increment Sevens/ }))
 
-    expect(
-      screen.getByRole('button', { name: /Sevens is 7/ }),
-    ).toBeInTheDocument()
+    const sevensCard = screen.getByRole('group', { name: 'Sevens' })
+    expect(within(sevensCard).getByText('7')).toBeInTheDocument()
     expect(screen.getByText('Total: 107'))
     expect(screen.getByPlaceholderText('label')).toHaveValue('')
     expect(screen.getByPlaceholderText('step')).toHaveValue(null)

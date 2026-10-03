@@ -3,6 +3,7 @@ import { Button } from './Button'
 type CounterProps = {
   label: string
   count: number // the parent now owns this value
+  step: number
   onIncrement: () => void // a function with no arguments that returns nothing
   onReset: () => void
   onRemove: () => void
@@ -10,26 +11,35 @@ type CounterProps = {
 
 function Counter({
   label,
+  step,
   count,
   onIncrement,
   onReset,
   onRemove,
 }: CounterProps) {
   return (
-    <div>
-      <Button type="button" onClick={() => onReset()}>
-        Reset
-      </Button>
-      <Button type="button" onClick={() => onIncrement()}>
-        {label} is {count}
-      </Button>
-      <Button
-        variant="danger"
-        aria-label={`Remove ${label}`}
-        onClick={onRemove}
-      >
-        ✕
-      </Button>
+    <div
+      role="group"
+      aria-label={label}
+      className="rounded-xl bg-white p-4 shadow-sm"
+    >
+      <div className="my-2 text-2xl font-bold">{label}</div>
+      <div className="my-2 text-4xl font-bold">{count}</div>
+      <div className="flex items-center justify-between">
+        <Button type="button" onClick={() => onReset()}>
+          Reset
+        </Button>
+        <Button aria-label={`Increment ${label}`} onClick={onIncrement}>
+          +{step}
+        </Button>
+        <Button
+          variant="danger"
+          aria-label={`Remove ${label}`}
+          onClick={onRemove}
+        >
+          ✕
+        </Button>
+      </div>
     </div>
   )
 }
