@@ -4,6 +4,8 @@ import {useFetch} from "./useFetch";
 import {isPresets} from "./types";
 
 
+const sevens = { label: 'Sevens', step: 7, start: 0 }
+
 async function settledState(response: Response | Error) {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
     if (response instanceof Response) {
@@ -23,7 +25,7 @@ async function settledState(response: Response | Error) {
 describe('useFetch', () => {
 
     test('loads and validates data', async () => {
-        expect(await settledState(new Response(JSON.stringify([{ label: 'Sevens', step: 7, start: 0 }]), { status: 200 }))).toEqual({ status: 'success', data: [{ label: 'Sevens', step: 7, start: 0 }] })
+        expect(await settledState(new Response(JSON.stringify([sevens]), { status: 200 }))).toEqual({ status: 'success', data: [{ label: 'Sevens', step: 7, start: 0 }] })
     })
 
     test('verify http error', async () => {
@@ -31,7 +33,7 @@ describe('useFetch', () => {
     })
 
     test('verify bad data', async () => {
-        expect(await settledState(new Response(JSON.stringify([{ label: 'Sevens', step: '7', start: 0 }]), { status: 200 }))).toEqual({ status: "error", error: "unexpected data from /presets.json"})
+        expect(await settledState(new Response(JSON.stringify([{ ...sevens, step: '7' }]), { status: 200 }))).toEqual({ status: "error", error: "unexpected data from /presets.json"})
     })
 
     test('verify network error', async () => {

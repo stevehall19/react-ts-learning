@@ -1,9 +1,34 @@
-import { describe, test, expect } from 'vitest'
+import { describe, test, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import App from './App'
+import App from "./App";
+
+const sevens = { label: 'Sevens', step: 7, start: 0 }
+
 
 describe('App', () => {
+
+    beforeEach(() => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('[]', { status: 200 }))
+    })
+
+    test('adds a counter from a fetched preset', async () => {
+        const user = userEvent.setup()
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+            new Response(JSON.stringify([sevens]), { status: 200 })
+        )
+        render(<App />)
+
+
+
+        expect(await screen.findByRole('button', { name: '+ Sevens' })).toBeInTheDocument()
+
+        await user.click(screen.getByRole('button', { name: '+ Sevens' }))
+
+        expect(screen.getByRole('button', { name: /Sevens is 0/ })).toBeInTheDocument()
+
+    })
+
     test('clicking a counter increments it', async () => {
         const user = userEvent.setup()
         render(<App />)
