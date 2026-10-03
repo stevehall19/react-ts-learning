@@ -2,9 +2,11 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 const variantStyles: Record<Variant, string> = {
   primary: 'bg-blue-600 text-white hover:bg-blue-700',
-  secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200',
-  ghost: 'text-slate-500 hover:bg-slate-100',
-  danger: 'text-slate-500 hover:bg-slate-100 hover:text-red-600',
+  secondary:
+    'bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-100 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600',
+  ghost: 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700',
+  danger:
+    'text-slate-500 hover:bg-slate-100 hover:text-red-600 dark:hover:bg-slate-700',
 }
 
 type ButtonProps = React.ComponentProps<'button'> & {

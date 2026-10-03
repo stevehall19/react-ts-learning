@@ -21,7 +21,7 @@ function Counter({
     <div
       role="group"
       aria-label={label}
-      className="rounded-xl bg-white p-4 shadow-sm"
+      className="rounded-xl bg-white p-4 shadow-sm dark:bg-slate-800"
     >
       <div className="my-2 text-2xl font-bold">{label}</div>
       <div className="my-2 text-4xl font-bold">{count}</div>

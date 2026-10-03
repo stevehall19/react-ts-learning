@@ -38,10 +38,10 @@ function App() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl">
+    <main className="mx-auto max-w-3xl px-4">
       <div>
         <h1 className="text-3xl font-bold">{title || 'Unknown'}</h1>
-        <p className="text-gray-800">Total: {total}</p>
+        <p className="text-slate-800 dark:text-slate-400">Total: {total}</p>
         <div>
           <Input
             placeholder="title"
@@ -69,8 +69,13 @@ function App() {
           </form>
         </div>
       </div>
+      <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-400">
+        Presets
+      </h2>
       {presets.status === 'loading' && <p>Loading presets…</p>}
-      {presets.status === 'error' && <p className="error">{presets.error}</p>}
+      {presets.status === 'error' && (
+        <p className="text-red-600">{presets.error}</p>
+      )}
       {presets.status === 'success' && (
         <div>
           {presets.data.map((preset) => (
