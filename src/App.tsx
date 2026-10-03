@@ -17,7 +17,7 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const { items, total, increment, reset, remove, add } = useCounters()
   const [title, setTitle] = useLocalStorage('title', 'My counters', isString)
-  const presets = useFetch('/presets.json', isPresets)
+  const presets = useFetch(`${import.meta.env.BASE_URL}presets.json`, isPresets)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
