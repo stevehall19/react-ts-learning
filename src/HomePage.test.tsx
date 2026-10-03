@@ -1,11 +1,23 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import App from './App'
+import HomePage from './HomePage.tsx'
+import { MemoryRouter } from 'react-router'
+import { CountersProvider } from './CountersContext.tsx'
 
 const sevens = { label: 'Sevens', step: 7, start: 0 }
 
-describe('App', () => {
+function renderHomePage() {
+  render(
+    <MemoryRouter>
+      <CountersProvider>
+        <HomePage />
+      </CountersProvider>
+    </MemoryRouter>,
+  )
+}
+
+describe('HomePage', () => {
   beforeEach(() => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response('[]', { status: 200 }),
@@ -17,7 +29,7 @@ describe('App', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify([sevens]), { status: 200 }),
     )
-    render(<App />)
+    renderHomePage()
 
     expect(
       await screen.findByRole('button', { name: '+ Sevens' }),
@@ -32,7 +44,7 @@ describe('App', () => {
 
   test('clicking a counter increments it', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderHomePage()
 
     await user.click(screen.getByRole('button', { name: /Increment Ones/ }))
 
@@ -43,7 +55,7 @@ describe('App', () => {
 
   test('adding a counter', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderHomePage()
 
     await user.type(screen.getByPlaceholderText('label'), 'Sevens')
     await user.type(screen.getByPlaceholderText('step'), '7')
@@ -60,7 +72,7 @@ describe('App', () => {
 
   test('rejects a zero step and keeps the input', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderHomePage()
 
     await user.type(screen.getByPlaceholderText('label'), 'Zero')
     await user.type(screen.getByPlaceholderText('step'), '0')
