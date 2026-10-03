@@ -1,6 +1,8 @@
 import { Button } from './Button'
+import { Link } from 'react-router'
 
 type CounterProps = {
+  id: string
   label: string
   count: number // the parent now owns this value
   step: number
@@ -10,6 +12,7 @@ type CounterProps = {
 }
 
 function Counter({
+  id,
   label,
   step,
   count,
@@ -23,7 +26,12 @@ function Counter({
       aria-label={label}
       className="rounded-xl bg-white p-4 shadow-sm dark:bg-slate-800"
     >
-      <div className="my-2 text-2xl font-bold">{label}</div>
+      <div className="my-2 text-2xl font-bold">
+        <Link to={`/counters/${id}`} className="hover:underline">
+          {label}
+        </Link>
+      </div>
+
       <div className="my-2 text-4xl font-bold">{count}</div>
       <div className="flex items-center justify-between">
         <Button type="button" onClick={() => onReset()}>

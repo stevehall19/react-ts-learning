@@ -96,6 +96,7 @@ function HomePage() {
         {items.map((item) => (
           <Counter
             key={item.id}
+            id={item.id}
             label={item.label}
             count={item.count}
             step={item.step}
