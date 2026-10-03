@@ -1,3 +1,5 @@
+import { Button } from './Button'
+
 type CounterProps = {
   label: string
   count: number // the parent now owns this value
@@ -15,15 +17,15 @@ function Counter({
 }: CounterProps) {
   return (
     <div>
-      <button type="button" className="counter" onClick={() => onReset()}>
+      <Button type="button" className="counter" onClick={() => onReset()}>
         Reset
-      </button>
-      <button type="button" className="counter" onClick={() => onIncrement()}>
+      </Button>
+      <Button type="button" className="counter" onClick={() => onIncrement()}>
         {label} is {count}
-      </button>
-      <button type="button" className="counter" onClick={() => onRemove()}>
-        X
-      </button>
+      </Button>
+      <Button className="text-slate-400 hover:text-red-600" onClick={onRemove}>
+        ✕
+      </Button>
     </div>
   )
 }

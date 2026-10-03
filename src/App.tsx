@@ -4,6 +4,7 @@ import { useCounters } from './useCounters'
 import { useLocalStorage } from './useLocalStorage'
 import { useFetch } from './useFetch'
 import { isPresets } from './types'
+import { Button } from './Button'
 
 function isString(value: unknown): value is string {
   return typeof value === 'string'
@@ -36,10 +37,10 @@ function App() {
   }
 
   return (
-    <main>
+    <main className="mx-auto max-w-3xl">
       <div>
-        <h1>{title || 'Unknown'}</h1>
-        <p>Total: {total}</p>
+        <h1 className="text-3xl font-bold">{title || 'Unknown'}</h1>
+        <p className="text-gray-800">Total: {total}</p>
         <div>
           <input
             placeholder="title"
@@ -61,9 +62,9 @@ function App() {
               onChange={(e) => setStepText(e.target.value)}
             />
 
-            <button type="submit" className="counter">
+            <Button type="submit" className="counter">
               Add
-            </button>
+            </Button>
           </form>
         </div>
       </div>
@@ -72,14 +73,13 @@ function App() {
       {presets.status === 'success' && (
         <div>
           {presets.data.map((preset) => (
-            <button
+            <Button
               type="button"
-              className="counter"
               key={preset.label}
               onClick={() => add(preset.label, preset.step, preset.start)}
             >
               + {preset.label}
-            </button>
+            </Button>
           ))}
         </div>
       )}
