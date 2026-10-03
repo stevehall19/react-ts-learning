@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "check": "tsc -b && oxlint && prettier --check . && vitest run"
   },
   "dependencies": {
     "react": "^19.2.8",
