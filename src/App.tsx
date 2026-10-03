@@ -38,56 +38,60 @@ function App() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4">
-      <div>
+    <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+      <header>
         <h1 className="text-3xl font-bold">{title || 'Unknown'}</h1>
         <p className="text-slate-800 dark:text-slate-400">Total: {total}</p>
-        <div>
-          <Input
-            placeholder="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          {error && <p className="text-red-600">{error}</p>}
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <Input
-              placeholder="label"
-              required
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-            />
-            <Input
-              placeholder="step"
-              type="number"
-              value={stepText}
-              onChange={(e) => setStepText(e.target.value)}
-            />
+      </header>
 
-            <Button type="submit" variant="primary">
-              Add
-            </Button>
-          </form>
-        </div>
+      <div className="flex flex-col gap-2">
+        <Input
+          placeholder="title"
+          value={title}
+          className="self-start"
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        {error && <p className="text-red-600">{error}</p>}
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <Input
+            placeholder="label"
+            required
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+          />
+          <Input
+            placeholder="step"
+            type="number"
+            value={stepText}
+            onChange={(e) => setStepText(e.target.value)}
+          />
+
+          <Button type="submit" variant="primary">
+            Add
+          </Button>
+        </form>
       </div>
-      <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-400">
-        Presets
-      </h2>
-      {presets.status === 'loading' && <p>Loading presets…</p>}
-      {presets.status === 'error' && (
-        <p className="text-red-600">{presets.error}</p>
-      )}
-      {presets.status === 'success' && (
-        <div>
-          {presets.data.map((preset) => (
-            <Button
-              key={preset.label}
-              onClick={() => add(preset.label, preset.step, preset.start)}
-            >
-              + {preset.label}
-            </Button>
-          ))}
-        </div>
-      )}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-400">
+          Presets
+        </h2>
+        {presets.status === 'loading' && <p>Loading presets…</p>}
+        {presets.status === 'error' && (
+          <p className="text-red-600">{presets.error}</p>
+        )}
+        {presets.status === 'success' && (
+          <div className="flex flex-wrap gap-2">
+            {presets.data.map((preset) => (
+              <Button
+                key={preset.label}
+                onClick={() => add(preset.label, preset.step, preset.start)}
+              >
+                + {preset.label}
+              </Button>
+            ))}
+          </div>
+        )}
+      </section>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
           <Counter
