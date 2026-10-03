@@ -1,11 +1,11 @@
-import Counter from './Counter'
+import Counter from '../Counter.tsx'
 import { useState } from 'react'
-import { useLocalStorage } from './useLocalStorage'
-import { useFetch } from './useFetch'
-import { isPresets } from './types'
-import { Button } from './Button'
-import { Input } from './Input'
-import { useCountersContext } from './CountersContext.tsx'
+import { useLocalStorage } from '../useLocalStorage.ts'
+import { useFetch } from '../useFetch.ts'
+import { isPresets } from '../types.ts'
+import { Button } from '../Button.tsx'
+import { Input } from '../Input.tsx'
+import { useCountersContext } from '../CountersContext.ts'
 
 function isString(value: unknown): value is string {
   return typeof value === 'string'

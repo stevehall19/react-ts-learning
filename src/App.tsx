@@ -1,8 +1,8 @@
 import { Routes, Route, Outlet, Link } from 'react-router'
-import HomePage from './HomePage'
-import { CountersProvider } from './CountersContext.tsx'
-import CounterPage from './CounterPage.tsx'
-import NotFound from './NotFound.tsx'
+import HomePage from './pages/HomePage'
+import { CountersProvider } from './CountersProvider'
+import CounterPage from './pages/CounterPage'
+import NotFound from './pages/NotFound'
 
 function Layout() {
   return (

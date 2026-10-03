@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import HomePage from './HomePage.tsx'
 import { MemoryRouter } from 'react-router'
-import { CountersProvider } from './CountersContext.tsx'
+import { CountersProvider } from '../CountersProvider'
 
 const sevens = { label: 'Sevens', step: 7, start: 0 }
 
