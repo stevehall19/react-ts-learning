@@ -1,3 +1,5 @@
+import type { components } from './api/schema'
+
 export type Preset = {
   label: string
   step: number
@@ -23,13 +25,7 @@ export function isPreset(value: unknown): value is Preset {
   )
 }
 
-export type CounterItem = {
-  id: string
-  label: string
-  count: number
-  step: number
-  start: number
-}
+export type CounterItem = components['schemas']['CounterResponse']
 
 export function isCounterItems(value: unknown): value is CounterItem[] {
   return Array.isArray(value) && value.every(isCounterItem)
