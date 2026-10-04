@@ -6,5 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface CounterRepository extends JpaRepository<Counter, UUID> {
-    List<Counter> findAllByOrderByCreatedAtAsc();
+
+  List<Counter> findAllByOrderByCreatedAtAsc();
+
 }
