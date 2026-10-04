@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "mariadb.fullname" . }}
+  labels:
+    {{- include "mariadb.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "mariadb.fullname" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+    {{- include "mariadb.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+      {{- include "mariadb.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: mariadb
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - name: mysql
+              containerPort: 3306
+          env:
+            - name: MARIADB_DATABASE
+              value: {{ .Values.auth.database }}
+            - name: MARIADB_USER
+              value: {{ .Values.auth.username }}
+            - name: MARIADB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mariadb.fullname" . }}
+                  key: password
+            - name: MARIADB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mariadb.fullname" . }}
+                  key: rootPassword
+          readinessProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}

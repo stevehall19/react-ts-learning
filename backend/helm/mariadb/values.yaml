@@ -1,0 +1,12 @@
+image:
+  repository: mariadb
+  tag: "11.8"
+auth:
+  database: counters
+  username: counters
+  password: PASSWORD
+  rootPassword: PASSWORD
+persistence:
+  size: 1Gi
+service:
+  port: 3306
