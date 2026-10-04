@@ -1,0 +1,13 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: counters-api
+  datasource:
+    url: jdbc:mariadb://${DB_HOST:localhost}:3306/counters
+    username: ${DB_USERNAME:counters}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
