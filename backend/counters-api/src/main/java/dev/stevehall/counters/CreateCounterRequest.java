@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 
 
 
-public record CreateCounterRequest(@NotBlank @Size(max = 100) String label, @NotNull @Min(1) Integer step, Integer start) {
+public record CreateCounterRequest(@NotBlank @Size(min=1, max = 100) String label, @NotNull @Min(1) Integer step, Integer start) {
   public CreateCounterRequest {
     if (start == null) {
       start = 0;
