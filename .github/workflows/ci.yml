@@ -2,7 +2,11 @@ name: CI
 
 on:
   push:
+    paths-ignore:
+      - 'backend/**'
   pull_request:
+    paths-ignore:
+      - 'backend/**'
 
 jobs:
   check:
