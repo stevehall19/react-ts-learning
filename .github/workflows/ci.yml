@@ -2,11 +2,9 @@ name: CI
 
 on:
   push:
-    paths-ignore:
-      - 'backend/**'
+    paths: ['**', '!backend/**', 'backend/counters-api/openapi.yaml']
   pull_request:
-    paths-ignore:
-      - 'backend/**'
+    paths: ['**', '!backend/**', 'backend/counters-api/openapi.yaml']
 
 jobs:
   check:
@@ -19,6 +17,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - run: npm run api:types
+      - run: git diff --exit-code src/api/schema.d.ts
 
   build:
     if: github.ref == 'refs/heads/main'
