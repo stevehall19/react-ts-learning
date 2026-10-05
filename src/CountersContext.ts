@@ -1,9 +1,7 @@
-import type { useCounters } from './useCounters'
+import type { Counters } from './counters'
 import { createContext, use } from 'react'
 
-export const CountersContext = createContext<ReturnType<
-  typeof useCounters
-> | null>(null)
+export const CountersContext = createContext<Counters | null>(null)
 
 export function useCountersContext() {
   const ctx = use(CountersContext)

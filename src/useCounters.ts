@@ -1,5 +1,6 @@
 import { type CounterItem, isCounterItems } from './types'
 import { useLocalStorage } from './useLocalStorage'
+import type { Counters } from './counters'
 
 const initialItems: CounterItem[] = [
   { id: crypto.randomUUID(), label: 'Ones', step: 1, start: 0, count: 0 },
@@ -8,14 +9,14 @@ const initialItems: CounterItem[] = [
   { id: crypto.randomUUID(), label: 'Tens', step: 10, start: 100, count: 100 },
 ]
 
-export function useCounters() {
+export function useCounters(): Counters {
   const [items, setItems] = useLocalStorage(
     'counters',
     initialItems,
     isCounterItems,
   )
 
-  function increment(id: string) {
+  async function increment(id: string) {
     setItems((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, count: item.count + item.step } : item,
@@ -23,7 +24,7 @@ export function useCounters() {
     )
   }
 
-  function reset(id: string) {
+  async function reset(id: string) {
     setItems((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, count: item.start } : item,
@@ -31,11 +32,11 @@ export function useCounters() {
     )
   }
 
-  function remove(id: string) {
+  async function remove(id: string) {
     setItems((prev) => prev.filter((item) => item.id !== id))
   }
 
-  function add(label: string, step: number, start = 0) {
+  async function add(label: string, step: number, start = 0) {
     const newItem: CounterItem = {
       id: crypto.randomUUID(),
       label,
@@ -48,5 +49,14 @@ export function useCounters() {
 
   const total = items.reduce((sum, item) => sum + item.count, 0)
 
-  return { items, total, increment, reset, remove, add }
+  return {
+    items,
+    total,
+    status: 'ready',
+    error: null,
+    increment,
+    reset,
+    remove,
+    add,
+  }
 }
