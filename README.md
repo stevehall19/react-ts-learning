@@ -87,6 +87,22 @@ After rebuilding the image, the running pod keeps the old one until it is replac
 kubectl rollout restart deployment counters-api
 ```
 
+#### Cluster script
+
+`scripts/cluster.ps1` wraps these steps for both releases. It only runs against the `docker-desktop` kubectl context, and reads the database passwords from `values.local.yaml`.
+
+```bash
+.\scripts\cluster.ps1 start
+```
+
+| Action        | What it does                                                                                                                      |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `start`       | Builds the API image if it's missing, installs both charts, and waits until the API answers on `localhost:8080`                   |
+| `stop`        | Uninstalls both releases and waits for the pods to go, freeing ports 3306 and 8080. The database volume is kept, so data survives |
+| `stop -Purge` | Also deletes the database volume; the next `start` gets a fresh database with only the seeded counters                            |
+| `reload`      | Rebuilds the image with Jib, applies chart changes to both releases, restarts the API pod and waits until it answers              |
+| `status`      | Shows the Helm releases, pods, services and volume                                                                                |
+
 ### 3. Frontend
 
 ```bash
