@@ -3,14 +3,22 @@ import HomePage from './pages/HomePage'
 import { CountersProvider } from './CountersProvider'
 import CounterPage from './pages/CounterPage'
 import NotFound from './pages/NotFound'
+import { useCountersContext } from './CountersContext'
 
 function Layout() {
+  const { status, error } = useCountersContext()
   return (
     <div>
       <nav>
         <Link to="/">Counters</Link>
       </nav>
-      <Outlet />
+      {status === 'loading' && <p className="px-4 py-8">Loading counters…</p>}
+      {status === 'error' && (
+        <p className="px-4 py-8 text-red-600">
+          Couldn't load counters: {error}
+        </p>
+      )}
+      {status === 'ready' && <Outlet />}
     </div>
   )
 }

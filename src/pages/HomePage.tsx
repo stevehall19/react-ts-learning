@@ -6,9 +6,16 @@ import { isPresets } from '../types.ts'
 import { Button } from '../Button.tsx'
 import { Input } from '../Input.tsx'
 import { useCountersContext } from '../CountersContext.ts'
+import { ApiError } from '../countersApi'
 
 function isString(value: unknown): value is string {
   return typeof value === 'string'
+}
+
+function messageFor(e: unknown): string {
+  if (e instanceof ApiError && e.errors)
+    return Object.values(e.errors).join(', ')
+  return e instanceof Error ? e.message : String(e)
 }
 
 function HomePage() {
@@ -19,7 +26,16 @@ function HomePage() {
   const [title, setTitle] = useLocalStorage('title', 'My counters', isString)
   const presets = useFetch(`${import.meta.env.BASE_URL}presets.json`, isPresets)
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function run(action: () => Promise<void>) {
+    try {
+      await action()
+      setError(null)
+    } catch (e) {
+      setError(messageFor(e))
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const step = Number(stepText)
     if (!Number.isInteger(step) || step <= 0) {
@@ -31,10 +47,11 @@ function HomePage() {
       return
     }
 
-    add(label.trim(), step)
-    setLabel('')
-    setStepText('')
-    setError(null)
+    await run(async () => {
+      await add(label.trim(), step)
+      setLabel('')
+      setStepText('')
+    })
   }
 
   return (
@@ -42,6 +59,11 @@ function HomePage() {
       <header>
         <h1 className="text-3xl font-bold">{title || 'Unknown'}</h1>
         <p className="text-slate-800 dark:text-slate-400">Total: {total}</p>
+        {error && (
+          <p role="alert" className="text-red-600">
+            {error}
+          </p>
+        )}
       </header>
 
       <div className="flex flex-col gap-2">
@@ -51,7 +73,6 @@ function HomePage() {
           className="self-start"
           onChange={(e) => setTitle(e.target.value)}
         />
-        {error && <p className="text-red-600">{error}</p>}
         <form onSubmit={handleSubmit} className="flex gap-2">
           <Input
             placeholder="label"
@@ -84,7 +105,9 @@ function HomePage() {
             {presets.data.map((preset) => (
               <Button
                 key={preset.label}
-                onClick={() => add(preset.label, preset.step, preset.start)}
+                onClick={() =>
+                  run(() => add(preset.label, preset.step, preset.start))
+                }
               >
                 + {preset.label}
               </Button>
@@ -100,9 +123,9 @@ function HomePage() {
             label={item.label}
             count={item.count}
             step={item.step}
-            onIncrement={() => increment(item.id)}
-            onReset={() => reset(item.id)}
-            onRemove={() => remove(item.id)}
+            onIncrement={() => run(() => increment(item.id))}
+            onReset={() => run(() => reset(item.id))}
+            onRemove={() => run(() => remove(item.id))}
           />
         ))}
       </div>

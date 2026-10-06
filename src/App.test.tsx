@@ -32,7 +32,9 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Delete' }))
 
+    expect(
+      await screen.findByRole('link', { name: 'Ones' }),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Tens' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Ones' })).toBeInTheDocument()
   })
 })

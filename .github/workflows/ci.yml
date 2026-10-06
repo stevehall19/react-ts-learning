@@ -16,9 +16,9 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run check
       - run: npm run api:types
       - run: git diff --exit-code src/api/schema.d.ts
+      - run: npm run check
 
   build:
     if: github.ref == 'refs/heads/main'
