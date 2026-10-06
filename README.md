@@ -4,7 +4,7 @@ A small counter app built to learn React and TypeScript, with a Spring Boot and 
 
 | Part                         | Stack                                                                                      | Folder                       |
 | ---------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------- |
-| Frontend                     | React 19, TypeScript 6, Vite 8, React Router 8, Tailwind CSS 4, Vitest 5                   | repo root (`src/`)           |
+| Frontend                     | React 19, TypeScript 6, Vite 8, React Router 8, Tailwind CSS 4, Vitest 5, Playwright       | repo root (`src/`, `e2e/`)   |
 | API                          | Spring Boot 4.1, Java 21, Spring Data JPA, Flyway, springdoc (OpenAPI 3.1), Testcontainers | `backend/counters-api/`      |
 | Database                     | MariaDB 11.8 on Docker Desktop's Kubernetes cluster, installed with a Helm chart           | `backend/helm/mariadb/`      |
 | API in Kubernetes (optional) | Container image built with Jib, deployed with a Helm chart                                 | `backend/helm/counters-api/` |
@@ -154,7 +154,24 @@ From `backend/counters-api`:
 
 Runs the controller slice tests, the integration tests against a throwaway MariaDB container (Docker must be running), and the OpenAPI snapshot test.
 
+### End-to-end tests
+
+The Playwright tests in `e2e/` drive the real app in Chromium against the real API and database. With the full stack running (database, and the API on `localhost:8080`, from either `spring-boot:run` or the cluster):
+
+```bash
+npx playwright install chromium
+```
+
+```bash
+npm run e2e
+```
+
+Playwright starts `npm run dev` itself, or reuses one that is already running. `npx playwright test --ui` shows the browser while the tests run.
+
+The tests create counters with unique `E2E …` labels and delete them afterwards, so they can run against your local database. One test expects the four seeded counters (Ones, Threes, Fives, Tens); if you deleted one of them locally, re-add it or that test fails. CI always starts from a fresh database.
+
 ## CI and deploy
 
 - `.github/workflows/ci.yml` (frontend) runs on changes outside `backend/`, and on changes to `openapi.yaml`. It checks the generated types are current, runs `npm run check`, then builds and deploys to GitHub Pages from `main`.
 - `.github/workflows/backend.yml` runs on changes under `backend/`: `./mvnw -B verify jib:buildTar` with Java 21, which runs the tests and checks the container image builds (nothing is pushed to a registry).
+- `.github/workflows/e2e.yml` runs on every push to `main` and on pull requests, and can be started by hand (`gh workflow run e2e.yml`, or "Run workflow" in the Actions tab). It creates a throwaway [kind](https://kind.sigs.k8s.io/) cluster, builds the API image with Jib and loads it into the cluster, installs both Helm charts, port-forwards the API to `localhost:8080`, and runs the Playwright tests. On failure it uploads the Playwright report and prints the API pod's logs.
