@@ -18,6 +18,14 @@ test.afterEach(async ({ request }) => {
   created.length = 0
 })
 
+test('shows the seeded counters from the API', async ({ page }) => {
+  await page.goto('/')
+
+  for (const label of ['Ones', 'Threes', 'Fives', 'Tens']) {
+    await expect(page.getByRole('group', { name: label })).toBeVisible()
+  }
+})
+
 test('add a new counter, increment its count, reload', async ({ page }) => {
   const label = uniqueLabel()
 
