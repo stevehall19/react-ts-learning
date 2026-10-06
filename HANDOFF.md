@@ -4,15 +4,14 @@ Last updated: 2026-10-06
 
 ## Summary
 
-Twelve frontend lessons and the backend "API track" lessons A0–A8 are done. The React counter app now has a Spring Boot + MariaDB API behind it in local development, joined by a committed OpenAPI contract, while the GitHub Pages build still runs entirely from `localStorage`.
+Twelve frontend lessons and the whole backend "API track" (A0–A9) are done. The React counter app has a Spring Boot + MariaDB API behind it in local development, joined by a committed OpenAPI contract. The API also runs as a Jib-built container in Docker Desktop's Kubernetes cluster next to MariaDB. The GitHub Pages build still runs entirely from `localStorage`.
 
 Status at handoff:
 
-- Last pushed commit is `a73e8f9`; both workflows are green.
-- **Not yet committed:** `src/useRemoteCounters.test.ts` (7 passing tests, finished and reviewed), plus this file and the rewritten `README.md`.
+- Last pushed commit is `48590d8`; both workflows are green (the backend run builds the image tarball).
+- Both pods run in the cluster: `counters-db-mariadb-0` (StatefulSet) and `counters-api-…` (Deployment), serving `localhost:3306` and `localhost:8080`.
 - Tests: 39 frontend (Vitest) and 9 backend (JUnit, including Testcontainers).
-
-The agreed next step is **A9: build the API image with Jib and run it in the cluster** (see the last section). Lesson 13 (shadcn/ui dialog) is still pending after that.
+- The API track is complete. The next planned lesson is Lesson 13 (shadcn/ui dialog); see the last section for other options.
 
 Each lesson pairs a short explanation (framed in Java terms) with an exercise the learner writes; Claude reviews the diff, runs the checks, and verifies in the browser pane or against the live API.
 
@@ -33,30 +32,32 @@ Each lesson pairs a short explanation (framed in Java terms) with an exercise th
 
 - `npm run dev` (http://localhost:5173, proxies `/api` to 8080) and `npm run check` (the gate before every commit)
 - `.\mvnw spring-boot:run` and `.\mvnw test` in `backend/counters-api`; the app reads `DB_PASSWORD` from a git-ignored `.env` there
+- Or run the API in the cluster: `.\mvnw compile jib:dockerBuild`, `helm install counters-api backend/helm/counters-api` (or `kubectl rollout restart deployment counters-api` after a rebuild)
 - `npm run api:types` regenerates `src/api/schema.d.ts`; `UPDATE_OPENAPI=true` on `OpenApiSpecTests` rewrites `openapi.yaml`
 - SQL against the cluster DB (stdin avoids PowerShell quoting): `"SELECT …;" | kubectl exec -i counters-db-mariadb-0 -- sh -c 'mariadb -u counters -p$MARIADB_PASSWORD counters'`
 
 **Pipelines:**
 
 - `ci.yml` (frontend) triggers on `paths: ['**', '!backend/**', 'backend/counters-api/openapi.yaml']`. `check`: `npm ci`, `npm run api:types` + `git diff --exit-code src/api/schema.d.ts` (drift check), `npm run check`. Then `build` and `deploy` to Pages on `main`.
-- `backend.yml` triggers on `backend/**`: setup-java 21 with Maven cache (`cache-dependency-path` points at the module's `pom.xml`), `./mvnw -B verify` in `backend/counters-api`. Verified that a backend-only push skips the frontend workflow.
+- `backend.yml` triggers on `backend/**`: setup-java 21 with Maven cache (`cache-dependency-path` points at the module's `pom.xml`), `./mvnw -B verify jib:buildTar` in `backend/counters-api` (tests, then the image as a tar; no registry). Verified that a backend-only push skips the frontend workflow.
 
 ## Lessons completed
 
 Frontend lessons 1–12 are unchanged from the previous handoff; briefly: components/state, props, lifting state, lists/forms, effects + type guards, custom hooks, testing, fetching, tooling, Tailwind, shipping (CI + Pages), React Router. The bugs column below lists the mistakes the learner actually hit on the API track.
 
-| #   | Topic              | Key concepts                                                                                                              | Bugs the learner hit                                                                                                           |
-| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| A0  | Kubernetes + Helm  | StatefulSet, Service (LoadBalancer → localhost), Secret, PVC, Helm templates/values, `nindent`, `secretKeyRef`            | Hard-coded Secret; Service selector copied from docs; `ports` as a map; password key wired to root password                    |
-| A1  | Spring project     | Initializr (Boot 4 split starters), relaxed binding, `.env` via `spring.config.import`, Maven wrapper                     | MySQL driver class with the MariaDB driver; default password in placeholder; project nested in `backend/counters-api`          |
-| A2  | Schema and entity  | Flyway migrations, `ddl-auto: validate`, MariaDB `UUID`, rich entity (no setters), derived queries                        | `CHECK` before `NOT NULL`; `String` id vs `uuid` column; English-style repository method name                                  |
-| A3  | Read endpoints     | Record DTOs, service throws, `@RestControllerAdvice`, `ProblemDetail`, `problemdetails.enabled`                           | `orElseThrow()` without supplier (500 instead of 404); `void` handler                                                          |
-| A4  | Write endpoints    | `@Valid`, compact constructor defaults, dirty checking, `@Transactional(readOnly)`, 201 + `Location`, field errors        | Missing validation starter; no `@RequestBody`; bare `@ResponseStatus` (500); returned the errors map instead of the problem    |
-| A5  | Backend tests + CI | `@WebMvcTest` + `@MockitoBean`, Testcontainers `@ServiceConnection`, Flyway clean/migrate per test, `backend.yml`         | 415 from `accept` vs `contentType`; order-dependent tests; flush/clear smell (learner pushed back, switched to Flyway reset)   |
-| A6a | OpenAPI contract   | springdoc code-first, required fields, explicit error content, doc-only `Problem`/`ValidationProblem`, snapshot test      | Copy-pasted `@GetMapping`; class-level `requiredMode`; Spring's `AssertionErrors.assertEquals` (message-first) imported        |
-| A6b | API client         | openapi-typescript + npm `overrides`, indexed access types, `ApiError` class, `request` helper, `RequestInit`, Vite proxy | Returned error objects instead of throwing; no HTTP methods; incomplete test fixture; problem body in the assertion            |
-| A7  | Remote hook        | Pessimistic updates, hook chosen at module level, `.env.[mode]`, `Layout` loading/error gate, `run(action)`, `messageFor` | `[items]` effect dependency (fetch loop); `push` in updater; `label.trim.length`; `export` in `vite-env.d.ts`                  |
-| A8  | Hook tests + docs  | `vi.mock` with `importOriginal`, `vi.mocked`, `loadedHook` helper, asserting rejections inside `act`                      | Test with no action; before == after state (reset); `vi.mocked(x)` as a no-op; duplicate fixture id; mocked the wrong function |
+| #   | Topic              | Key concepts                                                                                                              | Bugs the learner hit                                                                                                                                       |
+| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A0  | Kubernetes + Helm  | StatefulSet, Service (LoadBalancer → localhost), Secret, PVC, Helm templates/values, `nindent`, `secretKeyRef`            | Hard-coded Secret; Service selector copied from docs; `ports` as a map; password key wired to root password                                                |
+| A1  | Spring project     | Initializr (Boot 4 split starters), relaxed binding, `.env` via `spring.config.import`, Maven wrapper                     | MySQL driver class with the MariaDB driver; default password in placeholder; project nested in `backend/counters-api`                                      |
+| A2  | Schema and entity  | Flyway migrations, `ddl-auto: validate`, MariaDB `UUID`, rich entity (no setters), derived queries                        | `CHECK` before `NOT NULL`; `String` id vs `uuid` column; English-style repository method name                                                              |
+| A3  | Read endpoints     | Record DTOs, service throws, `@RestControllerAdvice`, `ProblemDetail`, `problemdetails.enabled`                           | `orElseThrow()` without supplier (500 instead of 404); `void` handler                                                                                      |
+| A4  | Write endpoints    | `@Valid`, compact constructor defaults, dirty checking, `@Transactional(readOnly)`, 201 + `Location`, field errors        | Missing validation starter; no `@RequestBody`; bare `@ResponseStatus` (500); returned the errors map instead of the problem                                |
+| A5  | Backend tests + CI | `@WebMvcTest` + `@MockitoBean`, Testcontainers `@ServiceConnection`, Flyway clean/migrate per test, `backend.yml`         | 415 from `accept` vs `contentType`; order-dependent tests; flush/clear smell (learner pushed back, switched to Flyway reset)                               |
+| A6a | OpenAPI contract   | springdoc code-first, required fields, explicit error content, doc-only `Problem`/`ValidationProblem`, snapshot test      | Copy-pasted `@GetMapping`; class-level `requiredMode`; Spring's `AssertionErrors.assertEquals` (message-first) imported                                    |
+| A6b | API client         | openapi-typescript + npm `overrides`, indexed access types, `ApiError` class, `request` helper, `RequestInit`, Vite proxy | Returned error objects instead of throwing; no HTTP methods; incomplete test fixture; problem body in the assertion                                        |
+| A7  | Remote hook        | Pessimistic updates, hook chosen at module level, `.env.[mode]`, `Layout` loading/error gate, `run(action)`, `messageFor` | `[items]` effect dependency (fetch loop); `push` in updater; `label.trim.length`; `export` in `vite-env.d.ts`                                              |
+| A8  | Hook tests + docs  | `vi.mock` with `importOriginal`, `vi.mocked`, `loadedHook` helper, asserting rejections inside `act`                      | Test with no action; before == after state (reset); `vi.mocked(x)` as a no-op; duplicate fixture id; mocked the wrong function                             |
+| A9  | Jib + Kubernetes   | Jib layering, `jib:dockerBuild`/`buildTar`, Deployment vs StatefulSet, Actuator probes, in-cluster DNS, `rollout restart` | `management:` nested under `spring:`; scaffold leftovers (ServiceAccount, `808080` port, `autoscaling` nil pointer); `initialDelaySeconds` under `httpGet` |
 
 ## Learner profile and teaching approach
 
@@ -97,26 +98,33 @@ The learner is a working Java developer (Spring is familiar) using IntelliJ on W
 
 **Backend (`backend/counters-api`, package `dev.stevehall.counters`).** Controller → service (`@Transactional`, throws `CounterNotFoundException`) → `CounterRepository` → `Counter` entity. `ApiExceptionHandler` extends `ResponseEntityExceptionHandler` (404 problem, 400 with `errors`). `Problem`/`ValidationProblem` exist only for the spec. Migrations in `src/main/resources/db/migration` (V1 table, V2 seed with fixed timestamps). Tests: `CounterControllerTest` (slice), `CounterApiIntegrationTests` and `OpenApiSpecTests` (same annotations so they share one context and container).
 
-**Cluster (`backend/helm/mariadb`).** Chart with Secret, StatefulSet (readiness via `healthcheck.sh`, PVC per pod) and LoadBalancer Service; real passwords in git-ignored `values.local.yaml`.
+**Cluster.** Two charts, both written by the learner:
+
+- `backend/helm/mariadb` (release `counters-db`): Secret, StatefulSet (readiness via `healthcheck.sh`, PVC per pod) and LoadBalancer Service; real passwords in git-ignored `values.local.yaml`.
+- `backend/helm/counters-api` (release `counters-api`): Deployment (image `counters-api:<appVersion>`, `IfNotPresent`; `DB_HOST`, `DB_USERNAME` and `DB_PASSWORD` from `database.*` values, the password via `secretKeyRef` on the mariadb chart's Secret; Actuator liveness/readiness probes, liveness `initialDelaySeconds: 30`) and LoadBalancer Service on 8080. Started from the `helm create` scaffold and trimmed.
+
+**Image.** `jib-maven-plugin` 3.5.2 in `pom.xml`: base `eclipse-temurin:21-jre`, user 1000, port 8080, tags `latest` and the project version. The `jib-spring-boot-extension-maven` 0.1.0 extension keeps DevTools out of the image (without it Jib copies the runtime-scoped DevTools jar and the app starts in dev mode on `restartedMain`).
 
 ## Open items
 
 Small tidy-ups the learner was told about but hasn't done:
 
-- [ ] Commit `src/useRemoteCounters.test.ts` (and these docs)
+- [ ] A9 self-healing check: `kubectl delete pod` on the API pod and watch the Deployment replace it (suggested, not confirmed done)
+- [ ] `backend/helm/counters-api/values.yaml` still carries scaffold comments and unused `pod*`/`securityContext` keys
 - [ ] `useRemoteCounters.test.ts`: test names "remove a counter" / "add a counter"; increment mock returns 110, which client arithmetic would also produce (999 would prove "server's value")
 - [ ] `package.json` `overrides` for openapi-typescript → TypeScript 6: remove once openapi-typescript supports TS 6
 - [ ] `CounterPage` keeps showing a counter deleted in another tab (accepted for now)
 - [ ] From the frontend track: `Button.tsx` duplicate `dark:` classes; `Counter.tsx` leftover comments and redundant `type="button"`; `CounterPage` doesn't show step/start; some imports carry `.ts`/`.tsx` extensions; `HomePage.test.tsx` matcher-less `expect`s; unused `.claude/launch.json`
 - [ ] Lesson 13 (shadcn/ui AlertDialog for delete) — explained, not started; check the current shadcn CLI first
 
-## Next: A9, containerise and deploy the API
+## Next
 
-1. Add `com.google.cloud.tools:jib-maven-plugin` (check the current version): base `eclipse-temurin:21-jre`, image `counters-api`, port 8080, non-root user. Build with `./mvnw compile jib:dockerBuild` into Docker Desktop's daemon; the kubeadm cluster can use it with `imagePullPolicy: IfNotPresent` (verify).
-2. Add Spring Boot Actuator for `/actuator/health/readiness` and `/liveness` probes. This changes the OpenAPI spec only if springdoc picks up actuator endpoints (it doesn't by default) — run the snapshot test.
-3. New chart `backend/helm/counters-api`: Deployment + LoadBalancer Service on 8080; `DB_HOST=counters-db-mariadb` (in-cluster DNS), `DB_PASSWORD` from the mariadb chart's Secret via `secretKeyRef`. Stop `spring-boot:run` first so 8080 is free; the Vite proxy then reaches the cluster-hosted API unchanged.
-4. CI: `./mvnw jib:buildTar` as a build smoke test; no registry push while everything is local.
-5. Prettier ignores `backend/`, so the new chart won't break the frontend check.
+The API track is finished. Options to offer, in rough order of how naturally they follow:
+
+- **Lesson 13, shadcn/ui** (the original plan): an AlertDialog confirming deletes, now on top of the async `remove`.
+- **Optimistic updates** in `useRemoteCounters`, with rollback on failure: the stretch goal from A7; test 6 in `useRemoteCounters.test.ts` shows what must still hold.
+- **Hosting the API** (deliberately out of scope so far): push the Jib image to GHCR, pick a managed MariaDB and a host, and configure CORS or a same-origin proxy for the Pages frontend.
+- **A Helm umbrella chart** installing both releases together, with the Secret name passed once.
 
 ## Environment gotchas
 
@@ -126,6 +134,9 @@ Small tidy-ups the learner was told about but hasn't done:
 - **IntelliJ auto-imports:** watch for the wrong `assertEquals`/`fail` (Spring, AssertJ) and stray static imports like `AbstractPersistable_.id`.
 - **Flyway on MariaDB:** a failed migration leaves a `success = 0` row; drop `counter` and `flyway_schema_history` (or `flyway repair`) before retrying. Never edit an applied migration.
 - **MariaDB passwords:** only applied on first init of the PVC; `helm upgrade` won't change them.
+- **Jib images in the cluster:** `jib:dockerBuild` loads into Docker Desktop's engine, which the kubeadm cluster uses directly. A rebuild with the same tag needs `kubectl rollout restart deployment counters-api`. Port 8080 is held by `wslrelay` (the cluster's LoadBalancer) while the API pod runs, so `spring-boot:run` can't start at the same time.
+- **Spring Boot 4.1 probes:** liveness/readiness groups are on by default even outside Kubernetes; `management.endpoint.health.probes.enabled` (top-level `management:`, not under `spring:`) is set anyway for clarity.
+- **`helm create` scaffolds:** removing values the templates still read (`autoscaling.enabled`) gives a nil-pointer render error; `with` blocks tolerate missing values, `if not .Values.x.y` doesn't. `helm lint` doesn't validate fields; use `helm template … | kubectl apply --dry-run=server -f -`.
 - **Spring not running:** the dev app shows "Couldn't load counters: HTTP 502" (Vite proxy's plain-text 502). In dev, React Strict Mode makes two `GET /api/counters` requests on load; that's expected.
 - **Browser pane:** has its own localStorage and can drive `localhost` dev servers; useful for importing `/src/countersApi.ts` in the console to exercise the client.
 - **Claude's memory:** progress notes now live in this project's memory folder (`api-track-plan`), and the full A0–A9 plan is in `C:\Users\Administrator\.claude\plans\artifact-view-context-artifact-fb366854-lazy-sloth.md`.

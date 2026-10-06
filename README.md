@@ -2,11 +2,12 @@
 
 A small counter app built to learn React and TypeScript, with a Spring Boot and MariaDB backend added later. The frontend runs on its own from `localStorage` (that is the version on [GitHub Pages](https://stevehall19.github.io/react-ts-learning/)); in local development it talks to the API instead.
 
-| Part     | Stack                                                                                      | Folder                  |
-| -------- | ------------------------------------------------------------------------------------------ | ----------------------- |
-| Frontend | React 19, TypeScript 6, Vite 8, React Router 8, Tailwind CSS 4, Vitest 5                   | repo root (`src/`)      |
-| API      | Spring Boot 4.1, Java 21, Spring Data JPA, Flyway, springdoc (OpenAPI 3.1), Testcontainers | `backend/counters-api/` |
-| Database | MariaDB 11.8 on Docker Desktop's Kubernetes cluster, installed with a Helm chart           | `backend/helm/mariadb/` |
+| Part                         | Stack                                                                                      | Folder                       |
+| ---------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------- |
+| Frontend                     | React 19, TypeScript 6, Vite 8, React Router 8, Tailwind CSS 4, Vitest 5                   | repo root (`src/`)           |
+| API                          | Spring Boot 4.1, Java 21, Spring Data JPA, Flyway, springdoc (OpenAPI 3.1), Testcontainers | `backend/counters-api/`      |
+| Database                     | MariaDB 11.8 on Docker Desktop's Kubernetes cluster, installed with a Helm chart           | `backend/helm/mariadb/`      |
+| API in Kubernetes (optional) | Container image built with Jib, deployed with a Helm chart                                 | `backend/helm/counters-api/` |
 
 ## Prerequisites
 
@@ -65,6 +66,26 @@ DB_PASSWORD=choose-an-app-password
 ```
 
 On first start, Flyway creates the `counter` table and seeds four counters. The API listens on http://localhost:8080.
+
+### 2 (alternative). API in the cluster
+
+Instead of `spring-boot:run`, the API can run as a pod next to MariaDB. Build the image into Docker Desktop with Jib (no Dockerfile), then install its chart:
+
+```bash
+.\mvnw compile jib:dockerBuild
+```
+
+```bash
+helm install counters-api backend/helm/counters-api
+```
+
+The pod gets the database password from the mariadb chart's Secret, so no `.env` is needed. Its `LoadBalancer` service also listens on `localhost:8080`, so stop `spring-boot:run` first; the frontend works the same either way. Kubernetes checks the pod through Actuator's probes (`/actuator/health/readiness` and `/actuator/health/liveness`).
+
+After rebuilding the image, the running pod keeps the old one until it is replaced:
+
+```bash
+kubectl rollout restart deployment counters-api
+```
 
 ### 3. Frontend
 
@@ -136,4 +157,4 @@ Runs the controller slice tests, the integration tests against a throwaway Maria
 ## CI and deploy
 
 - `.github/workflows/ci.yml` (frontend) runs on changes outside `backend/`, and on changes to `openapi.yaml`. It checks the generated types are current, runs `npm run check`, then builds and deploys to GitHub Pages from `main`.
-- `.github/workflows/backend.yml` runs on changes under `backend/`: `./mvnw -B verify` with Java 21.
+- `.github/workflows/backend.yml` runs on changes under `backend/`: `./mvnw -B verify jib:buildTar` with Java 21, which runs the tests and checks the container image builds (nothing is pushed to a registry).

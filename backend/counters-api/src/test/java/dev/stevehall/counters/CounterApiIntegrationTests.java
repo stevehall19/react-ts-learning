@@ -12,6 +12,14 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -75,6 +83,24 @@ class CounterApiIntegrationTests {
     mockMvc.perform(get("/api/counters/" + generatedId))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.count").value(step*2));
+  }
+
+  @Test
+  void concurrentIncrementsAreNotLost() throws Exception {
+    var step = 7;
+    var increments = 20;
+    UUID id = counterService.create("Sevens", step, 0).getId();
+
+    List<Callable<Counter>> tasks =
+      Collections.nCopies(increments, () -> counterService.increment(id));
+
+    try (ExecutorService executor = Executors.newFixedThreadPool(10)) {
+      for (Future<Counter> result : executor.invokeAll(tasks)) {
+        result.get();
+      }
+    }
+
+    assertEquals(increments * step, counterService.findById(id).getCount());
   }
 
   @Test

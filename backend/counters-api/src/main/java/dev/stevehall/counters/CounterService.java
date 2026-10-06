@@ -32,21 +32,25 @@ public class CounterService {
 
   @Transactional
   public Counter increment(UUID id) {
-    var counter = findById(id);
+    var counter = findForUpdate(id);
     counter.increment();
     return counter;
   }
 
   @Transactional
   public Counter reset(UUID id) {
-   var counter = findById(id);
-   counter.reset();
-   return counter;
+    var counter = findForUpdate(id);
+    counter.reset();
+    return counter;
   }
 
   @Transactional
   public void delete(UUID id) {
     var counter = findById(id);
     counterRepository.delete(counter);
+  }
+
+  private Counter findForUpdate(UUID id) {
+    return counterRepository.findByIdForUpdate(id).orElseThrow(() -> new CounterNotFoundException(id));
   }
 }
