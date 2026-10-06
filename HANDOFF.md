@@ -1,132 +1,131 @@
 # React + TypeScript Learning — Session Handoff
 
-Last updated: 2026-10-03
+Last updated: 2026-10-06
 
 ## Summary
 
-Twelve lessons are done: the learner built a typed, tested, multi-page React counter app and shipped it to a public URL with CI/CD. The working tree is clean, everything is pushed (last commit `b11b097`), and the pipeline is green with 25 passing tests.
+Twelve frontend lessons and the backend "API track" lessons A0–A8 are done. The React counter app now has a Spring Boot + MariaDB API behind it in local development, joined by a committed OpenAPI contract, while the GitHub Pages build still runs entirely from `localStorage`.
 
-The session started from an empty folder with no Node.js installed. Each lesson paired a short explanation (framed in Java terms) with an exercise the learner wrote and Claude reviewed, verified and committed.
+Status at handoff:
 
-The agreed next step is Lesson 13: a delete-confirmation dialog built with shadcn/ui. It has been explained but not started.
+- Last pushed commit is `a73e8f9`; both workflows are green.
+- **Not yet committed:** `src/useRemoteCounters.test.ts` (7 passing tests, finished and reviewed), plus this file and the rewritten `README.md`.
+- Tests: 39 frontend (Vitest) and 9 backend (JUnit, including Testcontainers).
+
+The agreed next step is **A9: build the API image with Jib and run it in the cluster** (see the last section). Lesson 13 (shadcn/ui dialog) is still pending after that.
+
+Each lesson pairs a short explanation (framed in Java terms) with an exercise the learner writes; Claude reviews the diff, runs the checks, and verifies in the browser pane or against the live API.
 
 ## Project and environment
-
-The app lives in one public repo and deploys itself to GitHub Pages on every green push to `main`.
 
 | Item         | Value                                                                                                                                            |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Local folder | `C:\Users\Administrator\react-ts-learning` (branch `main`)                                                                                       |
 | GitHub repo  | [stevehall19/react-ts-learning](https://github.com/stevehall19/react-ts-learning) (public)                                                       |
-| Live site    | [stevehall19.github.io/react-ts-learning](https://stevehall19.github.io/react-ts-learning/)                                                      |
-| Stack        | React 19, TypeScript 6 (strict by default), Vite 8, React Router 8, Tailwind CSS 4, Vitest 5 + React Testing Library                             |
-| Node.js      | 24 LTS, installed via winget at `C:\Program Files\nodejs`                                                                                        |
-| GitHub CLI   | 2.102, installed via winget at `C:\Program Files\GitHub CLI`; signed in as stevehall19 with the `workflow` scope                                 |
-| Git identity | `shall` / `5874027+stevehall19@users.noreply.github.com`, set globally; history was rewritten before the first push to remove the personal email |
+| Live site    | [stevehall19.github.io/react-ts-learning](https://stevehall19.github.io/react-ts-learning/) (localStorage only; the API code is tree-shaken out) |
+| Frontend     | React 19, TypeScript 6, Vite 8, React Router 8, Tailwind CSS 4, Vitest 5 + React Testing Library, openapi-typescript 7.13.0 (pinned)             |
+| Backend      | Spring Boot 4.1.1, Java 21, Spring Data JPA (Hibernate 7.4), Flyway, Bean Validation, springdoc 3.1.1, Testcontainers 2, Jackson 3               |
+| Database     | MariaDB 11.8 in Docker Desktop's Kubernetes (kubeadm, node `docker-desktop`), installed by the learner's own Helm chart as release `counters-db` |
+| Tools        | Node.js 24, Java 21, Docker Desktop (Docker 29.8, Kubernetes 1.36), Helm 4.3, k9s 0.51, GitHub CLI 2.102 (`C:\Program Files\GitHub CLI`)         |
+| Git identity | `shall` / `5874027+stevehall19@users.noreply.github.com`, set globally                                                                           |
 
-**Commands** (run from the project folder):
+**Commands** — see `README.md` for the full local setup. The ones used most:
 
-- `npm run dev` starts the dev server at http://localhost:5173 (the learner runs it from IntelliJ)
-- `npm run check` runs `tsc -b`, oxlint, `prettier --check` and `vitest run`; this is the gate before every commit
-- `npm run format` fixes formatting; `npm test` runs Vitest in watch mode
+- `npm run dev` (http://localhost:5173, proxies `/api` to 8080) and `npm run check` (the gate before every commit)
+- `.\mvnw spring-boot:run` and `.\mvnw test` in `backend/counters-api`; the app reads `DB_PASSWORD` from a git-ignored `.env` there
+- `npm run api:types` regenerates `src/api/schema.d.ts`; `UPDATE_OPENAPI=true` on `OpenApiSpecTests` rewrites `openapi.yaml`
+- SQL against the cluster DB (stdin avoids PowerShell quoting): `"SELECT …;" | kubectl exec -i counters-db-mariadb-0 -- sh -c 'mariadb -u counters -p$MARIADB_PASSWORD counters'`
 
-**Pipeline** (`.github/workflows/ci.yml`):
+**Pipelines:**
 
-1. `check` runs `npm ci` and `npm run check` on every push and pull request.
-2. `build` runs on `main` only, after `check`, with `GITHUB_PAGES=true` so Vite uses the `/react-ts-learning/` base path; it copies `index.html` to `404.html` so deep links survive a refresh.
-3. `deploy` publishes the build with `actions/deploy-pages`.
+- `ci.yml` (frontend) triggers on `paths: ['**', '!backend/**', 'backend/counters-api/openapi.yaml']`. `check`: `npm ci`, `npm run api:types` + `git diff --exit-code src/api/schema.d.ts` (drift check), `npm run check`. Then `build` and `deploy` to Pages on `main`.
+- `backend.yml` triggers on `backend/**`: setup-java 21 with Maven cache (`cache-dependency-path` points at the module's `pom.xml`), `./mvnw -B verify` in `backend/counters-api`. Verified that a backend-only push skips the frontend workflow.
 
 ## Lessons completed
 
-All twelve lessons are finished and committed; the bugs column lists the mistakes the learner actually hit, which are worth recalling as reference points.
+Frontend lessons 1–12 are unchanged from the previous handoff; briefly: components/state, props, lifting state, lists/forms, effects + type guards, custom hooks, testing, fetching, tooling, Tailwind, shipping (CI + Pages), React Router. The bugs column below lists the mistakes the learner actually hit on the API track.
 
-| #   | Topic                   | Key concepts                                                                                   | Bugs the learner hit                                                        |
-| --- | ----------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| 1   | Components and state    | JSX, `useState`, type inference, updater functions                                             | Unused updater parameter; learned the dev server doesn't type-check         |
-| 2   | Typed props             | Props types, optional props, defaults                                                          | Reset went to 0 instead of `start` (types can't catch logic)                |
-| 3   | Lifting state up        | Callbacks, immutable updates, `.map()`, `key`                                                  | Displayed `cfg.start` instead of `counts[i]`                                |
-| 4   | Lists and forms         | Objects with ids, spread, `filter`, controlled inputs, validation, `key` vs index              | `count` initialised wrong; Java-style null check on a `string`              |
-| 5   | Effects and persistence | `useEffect`, lazy `useState`, `unknown`, type guards                                           | Guard checked `value.id` for every field                                    |
-| 6   | Custom hooks            | Generics, tuple returns, `useLocalStorage<T>`, `useCounters()`                                 | Hook body returned `T` instead of the tuple; `add` let callers pass `count` |
-| 7   | Testing                 | Vitest, `renderHook`/`act`, Testing Library queries, regression tests                          | `toThrow` on a boolean; an action with no assertion                         |
-| 8   | Fetching data           | `async`/`await`, discriminated unions, `useFetch<T>`, cleanup, mocking `fetch`                 | `ignore` checked too early; mock created outside the test                   |
-| 9   | Tooling                 | `.gitattributes`, `.editorconfig`, Prettier, stricter oxlint rules, `npm run check`            | —                                                                           |
-| 10  | Tailwind CSS            | Utility classes, `Button`/`Input` components, cards, responsive grid, dark mode                | Base classes as a prop default; hover colours without `dark:` partners      |
-| 11  | Shipping                | GitHub repo, Actions CI, Pages deploy, base path, `import.meta.env.BASE_URL`                   | Hard-coded `/presets.json` 404'd on Pages                                   |
-| 12  | React Router            | Layout + `Outlet`, URL params, `Link`, `useNavigate`, Context for shared state, `MemoryRouter` | Hooks at module level; `key` assumed to reach the component                 |
+| #   | Topic              | Key concepts                                                                                                              | Bugs the learner hit                                                                                                           |
+| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| A0  | Kubernetes + Helm  | StatefulSet, Service (LoadBalancer → localhost), Secret, PVC, Helm templates/values, `nindent`, `secretKeyRef`            | Hard-coded Secret; Service selector copied from docs; `ports` as a map; password key wired to root password                    |
+| A1  | Spring project     | Initializr (Boot 4 split starters), relaxed binding, `.env` via `spring.config.import`, Maven wrapper                     | MySQL driver class with the MariaDB driver; default password in placeholder; project nested in `backend/counters-api`          |
+| A2  | Schema and entity  | Flyway migrations, `ddl-auto: validate`, MariaDB `UUID`, rich entity (no setters), derived queries                        | `CHECK` before `NOT NULL`; `String` id vs `uuid` column; English-style repository method name                                  |
+| A3  | Read endpoints     | Record DTOs, service throws, `@RestControllerAdvice`, `ProblemDetail`, `problemdetails.enabled`                           | `orElseThrow()` without supplier (500 instead of 404); `void` handler                                                          |
+| A4  | Write endpoints    | `@Valid`, compact constructor defaults, dirty checking, `@Transactional(readOnly)`, 201 + `Location`, field errors        | Missing validation starter; no `@RequestBody`; bare `@ResponseStatus` (500); returned the errors map instead of the problem    |
+| A5  | Backend tests + CI | `@WebMvcTest` + `@MockitoBean`, Testcontainers `@ServiceConnection`, Flyway clean/migrate per test, `backend.yml`         | 415 from `accept` vs `contentType`; order-dependent tests; flush/clear smell (learner pushed back, switched to Flyway reset)   |
+| A6a | OpenAPI contract   | springdoc code-first, required fields, explicit error content, doc-only `Problem`/`ValidationProblem`, snapshot test      | Copy-pasted `@GetMapping`; class-level `requiredMode`; Spring's `AssertionErrors.assertEquals` (message-first) imported        |
+| A6b | API client         | openapi-typescript + npm `overrides`, indexed access types, `ApiError` class, `request` helper, `RequestInit`, Vite proxy | Returned error objects instead of throwing; no HTTP methods; incomplete test fixture; problem body in the assertion            |
+| A7  | Remote hook        | Pessimistic updates, hook chosen at module level, `.env.[mode]`, `Layout` loading/error gate, `run(action)`, `messageFor` | `[items]` effect dependency (fetch loop); `push` in updater; `label.trim.length`; `export` in `vite-env.d.ts`                  |
+| A8  | Hook tests + docs  | `vi.mock` with `importOriginal`, `vi.mocked`, `loadedHook` helper, asserting rejections inside `act`                      | Test with no action; before == after state (reset); `vi.mocked(x)` as a no-op; duplicate fixture id; mocked the wrong function |
 
 ## Learner profile and teaching approach
 
-The learner is a working developer with a Java background who codes in IntelliJ; explaining each idea through its Java equivalent has worked best.
+The learner is a working Java developer (Spring is familiar) using IntelliJ on Windows with PowerShell. They now also own the backend, Kubernetes and CI side.
 
 **What has worked**
 
-- One short lesson, then an exercise the learner writes themselves. Hints come before full answers; a complete solution only when they're clearly stuck.
-- Java analogies: streams for `map`/`filter`/`reduce`, sealed interfaces for discriminated unions, Mockito for `vi.spyOn`, dependency injection for Context.
-- Reviewing every "take a look" by reading the diff and running `npm run check`, then checking the result in the browser pane.
-- Mutation checks on new tests: temporarily reintroduce the bug, confirm the test fails, restore. The learner now does this unprompted.
-- Committing each finished step with a descriptive message. The learner now commits and pushes themselves; deploys happen through the pipeline.
+- Short lesson, then an exercise the learner writes; hints before answers. At genuine difficulty jumps (the API client in A6b), giving the core piece in full (`ApiError` + `request`) and leaving the rest worked well; the learner said so explicitly.
+- Java analogies throughout: `@WebMvcTest` ↔ mocked-fetch tests, `vi.mock` ↔ Mockito, contract type ↔ interface, `@Configuration` ↔ choosing the hook at module level.
+- Reviewing by reading the diff, running the checks, and exercising the real thing (curl against Spring, the browser pane against the dev server, `kubectl exec` against MariaDB, `gh run view` for CI).
+- "Would this test fail if I broke the code?" — the A8 tests needed this question several times; the learner runs mutation checks when asked.
+- The learner drives design: they chose Helm over compose, Jib, an OpenAPI contract, and pushed back on `@Transactional` tests. Take these seriously and adjust the plan.
 
 **Things to keep in mind**
 
-- Verify claims before teaching them. Three times this session a confident claim was wrong (what `useState("0")` would break in Lesson 1, why Prettier flagged `index.html`, and TypeScript narrowing inside `function` declarations); the learner caught two of them.
-- The learner pastes snippets verbatim, comments included, so examples should be clean and complete.
-- Steps they skip are usually missed, not refused: re-mention unfinished items briefly rather than assuming.
+- Verify before claiming. Wrong claims this track: `getResource("/")` for the module path (returned a jar), "IntelliJ runs tests from the module folder", a `--repeat` flag for Vitest, and an outline in a YAML code block that the learner pasted as real YAML. The frontend CI was also red for six commits (Prettier on Helm templates) before anyone noticed: check `gh run list` after pushes.
+- The learner pastes snippets verbatim; examples must be complete and valid.
+- They sometimes say "committed" or "pushed" before it has happened; check `git status` / `git log` rather than assuming.
+- Leftover copy-paste from neighbouring code is the most common bug source (selectors, ids, annotations, test names).
 
 ## Codebase map
 
-State lives in one place: `CountersProvider` calls `useCounters()` once and every page reads it through `useCountersContext()`.
+**Frontend (`src/`).** `CountersProvider` picks one implementation of the `Counters` contract at module level and every page reads it through `useCountersContext()`.
 
-| File (under `src/`)             | Owns                                                                                                            |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `main.tsx`                      | Entry point; wraps `App` in `BrowserRouter` with `basename={import.meta.env.BASE_URL}`                          |
-| `App.tsx`                       | `CountersProvider` around the routes; `Layout` (nav + `Outlet`); routes `/`, `counters/:id`, `*`                |
-| `CountersContext.ts`            | The context object and `useCountersContext()` (throws outside the provider)                                     |
-| `CountersProvider.tsx`          | The provider component; the single `useCounters()` call                                                         |
-| `useCounters.ts`                | Counter rules: `increment`, `reset`, `remove`, `add(label, step, start = 0)`, `total`; `setItems` stays private |
-| `useLocalStorage.ts`            | Generic `useLocalStorage<T>(key, fallback, isValid)` returning a `[value, setValue]` tuple                      |
-| `useFetch.ts`                   | Generic `useFetch<T>(url, isValid)` returning a `FetchState<T>` union, with `ignore` cleanup                    |
-| `types.ts`                      | `CounterItem`, `Preset` and their type guards                                                                   |
-| `pages/HomePage.tsx`            | Title, total, add form with validation, presets, responsive grid of cards                                       |
-| `pages/CounterPage.tsx`         | Details page: increment, reset, delete then `navigate('/')`; not-found state                                    |
-| `pages/NotFound.tsx`            | Catch-all page                                                                                                  |
-| `Counter.tsx`                   | One card (`role="group"`, labelled) linking to its details page                                                 |
-| `Button.tsx`, `Input.tsx`       | Styled primitives; `Button` variants via `Record<Variant, string>`, default `type="button"`                     |
-| `*.test.ts(x)`, `setupTests.ts` | 25 tests across guards, hooks, pages and a full-route test; setup clears localStorage between tests             |
+| File                    | Owns                                                                                                                                                             |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `counters.ts`           | The `Counters` contract: items, total, status, error, four `Promise<void>` actions                                                                               |
+| `CountersProvider.tsx`  | `useCountersImpl` = `useRemoteCounters` when `VITE_COUNTERS_API === 'true'`, else `useCounters`                                                                  |
+| `useCounters.ts`        | Local implementation on `useLocalStorage`; always `status: 'ready'`                                                                                              |
+| `useRemoteCounters.ts`  | Remote implementation: loads once with `ignore` cleanup, pessimistic actions, actions reject on failure                                                          |
+| `countersApi.ts`        | Typed client: `request` helper (204, problem bodies), `ApiError`, `listCounters`/`findCounter`/`createCounter`/`incrementCounter`/`resetCounter`/`removeCounter` |
+| `api/schema.d.ts`       | Generated from `openapi.yaml`; never edit by hand                                                                                                                |
+| `types.ts`              | `CounterItem` = contract's `CounterResponse`; `Preset`; runtime guards                                                                                           |
+| `App.tsx`               | `Layout` shows loading / error / `Outlet`; routes `/`, `counters/:id`, `*`                                                                                       |
+| `pages/HomePage.tsx`    | Add form (client checks + server field errors via `messageFor`), presets, cards; `run(action)` for errors                                                        |
+| `pages/CounterPage.tsx` | Details; `run` for actions; delete awaits before navigating                                                                                                      |
+| `vite-env.d.ts`         | Types `VITE_COUNTERS_API` (must stay a non-module file to merge)                                                                                                 |
 
-Other files that matter: `public/presets.json` (the fetched presets), `vite.config.ts` (base path, Tailwind and test config) and `.oxlintrc.json`, `.prettierrc.json`, `.editorconfig`, `.gitattributes`.
+**Backend (`backend/counters-api`, package `dev.stevehall.counters`).** Controller → service (`@Transactional`, throws `CounterNotFoundException`) → `CounterRepository` → `Counter` entity. `ApiExceptionHandler` extends `ResponseEntityExceptionHandler` (404 problem, 400 with `errors`). `Problem`/`ValidationProblem` exist only for the spec. Migrations in `src/main/resources/db/migration` (V1 table, V2 seed with fixed timestamps). Tests: `CounterControllerTest` (slice), `CounterApiIntegrationTests` and `OpenApiSpecTests` (same annotations so they share one context and container).
+
+**Cluster (`backend/helm/mariadb`).** Chart with Secret, StatefulSet (readiness via `healthcheck.sh`, PVC per pod) and LoadBalancer Service; real passwords in git-ignored `values.local.yaml`.
 
 ## Open items
 
-Nothing is broken; these are small tidy-ups the learner was told about but hasn't done yet.
+Small tidy-ups the learner was told about but hasn't done:
 
-- [ ] `Button.tsx`: the `secondary` variant lists `dark:bg-slate-700 dark:text-slate-100` twice
-- [ ] `Counter.tsx`: leftover Lesson 2/3 comments in `CounterProps`; redundant `type="button"` on Reset
-- [ ] `CounterPage.tsx`: step and start aren't shown (the exercise asked for "Step 7 · starts at 0")
-- [ ] A few imports still carry `.ts`/`.tsx` extensions; IntelliJ's "Use file extension: Never" setting would stop new ones
-- [ ] `HomePage.test.tsx`: some `expect(getByText(…))` calls have no matcher, and the zero-step test's name promises "keeps the input" without asserting it
-- [ ] `.claude/launch.json` is git-ignored and unused; the browser pane never picked it up
+- [ ] Commit `src/useRemoteCounters.test.ts` (and these docs)
+- [ ] `useRemoteCounters.test.ts`: test names "remove a counter" / "add a counter"; increment mock returns 110, which client arithmetic would also produce (999 would prove "server's value")
+- [ ] `package.json` `overrides` for openapi-typescript → TypeScript 6: remove once openapi-typescript supports TS 6
+- [ ] `CounterPage` keeps showing a counter deleted in another tab (accepted for now)
+- [ ] From the frontend track: `Button.tsx` duplicate `dark:` classes; `Counter.tsx` leftover comments and redundant `type="button"`; `CounterPage` doesn't show step/start; some imports carry `.ts`/`.tsx` extensions; `HomePage.test.tsx` matcher-less `expect`s; unused `.claude/launch.json`
+- [ ] Lesson 13 (shadcn/ui AlertDialog for delete) — explained, not started; check the current shadcn CLI first
 
-## Next: Lesson 13, shadcn/ui
+## Next: A9, containerise and deploy the API
 
-The plan is a "Delete Tens? This can't be undone." confirmation dialog, built from shadcn/ui's AlertDialog. The concept has been explained (copied-in source, Radix behaviour, Tailwind styling, `cva` + `cn()`); no code exists yet.
-
-1. Run `npx shadcn init`; decide how its `@/` alias and colour variables fit the existing Tailwind setup.
-2. Add AlertDialog with `npx shadcn add alert-dialog`.
-3. Wrap both Delete buttons (the card's ✕ and the details page) in the dialog.
-4. Decide whether to adopt shadcn's `Button` (`cva`) or keep the learner's `Record<Variant, string>` version, and compare the two.
-5. Test it with role queries (`alertdialog`): open, focus moves in, Escape closes, Cancel keeps the counter, Confirm deletes.
-
-shadcn changes fast. Check the current CLI and docs before starting rather than relying on memory, as was done for React Router 8.
+1. Add `com.google.cloud.tools:jib-maven-plugin` (check the current version): base `eclipse-temurin:21-jre`, image `counters-api`, port 8080, non-root user. Build with `./mvnw compile jib:dockerBuild` into Docker Desktop's daemon; the kubeadm cluster can use it with `imagePullPolicy: IfNotPresent` (verify).
+2. Add Spring Boot Actuator for `/actuator/health/readiness` and `/liveness` probes. This changes the OpenAPI spec only if springdoc picks up actuator endpoints (it doesn't by default) — run the snapshot test.
+3. New chart `backend/helm/counters-api`: Deployment + LoadBalancer Service on 8080; `DB_HOST=counters-db-mariadb` (in-cluster DNS), `DB_PASSWORD` from the mariadb chart's Secret via `secretKeyRef`. Stop `spring-boot:run` first so 8080 is free; the Vite proxy then reaches the cluster-hosted API unchanged.
+4. CI: `./mvnw jib:buildTar` as a build smoke test; no registry push while everything is local.
+5. Prettier ignores `backend/`, so the new chart won't break the frontend check.
 
 ## Environment gotchas
 
-Most lost time this session came from the Windows shell and caching, not from the code.
-
-- **PowerShell call operator:** the learner's IntelliJ terminal is PowerShell, so a quoted exe path needs `&` in front: `& "C:\Program Files\GitHub CLI\gh.exe" …`.
-- **PATH after installs:** shells opened before the Node.js and gh installs don't see them. Prepend `C:\Program Files\nodejs` (and the GitHub CLI folder) in older shells, or restart IntelliJ.
-- **Dev server:** the learner runs `npm run dev` themselves. A background server started by Claude stops after 2 hours. A blank page usually means a compile error: check the Vite terminal, the browser console, then `npx tsc -b`.
-- **Browser pane:** it has its own localStorage, separate from the learner's browser, and it renders in dark mode. Tests run there don't touch the learner's data.
-- **GitHub Pages caching:** after a deploy, the pane or browser may show the old build. Hard-refresh, or add a `?v=<sha>` query to bypass the cache.
-- **Claude's memory:** the progress notes are stored under the `dj_agent` project's memory folder, so a new chat started in `react-ts-learning` won't load them. Point the next session at this file instead.
-- **Prettier and line endings:** `.editorconfig` sets LF and 2-space indents; IntelliJ's Prettier "run on save" should include `.html` so `index.html` stays formatted.
+- **PowerShell 5.1:** mangles `"` nested inside arguments to native programs (SQL, JSON); pipe the text on stdin instead (`… | kubectl exec -i …`, `… | curl.exe --data-binary '@-' …`). `curl` is an alias for `Invoke-WebRequest`; use `curl.exe`.
+- **Line endings:** IntelliJ created some files with CRLF; Prettier then fails `npm run check`. `npm run format` fixes it; set IntelliJ's default line separator to LF.
+- **`mvnw` executable bit:** Windows commits it as `100644`; it needed `git update-index --chmod=+x` for the Linux runner.
+- **IntelliJ auto-imports:** watch for the wrong `assertEquals`/`fail` (Spring, AssertJ) and stray static imports like `AbstractPersistable_.id`.
+- **Flyway on MariaDB:** a failed migration leaves a `success = 0` row; drop `counter` and `flyway_schema_history` (or `flyway repair`) before retrying. Never edit an applied migration.
+- **MariaDB passwords:** only applied on first init of the PVC; `helm upgrade` won't change them.
+- **Spring not running:** the dev app shows "Couldn't load counters: HTTP 502" (Vite proxy's plain-text 502). In dev, React Strict Mode makes two `GET /api/counters` requests on load; that's expected.
+- **Browser pane:** has its own localStorage and can drive `localhost` dev servers; useful for importing `/src/countersApi.ts` in the console to exercise the client.
+- **Claude's memory:** progress notes now live in this project's memory folder (`api-track-plan`), and the full A0–A9 plan is in `C:\Users\Administrator\.claude\plans\artifact-view-context-artifact-fb366854-lazy-sloth.md`.

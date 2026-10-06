@@ -24,4 +24,4 @@ jobs:
           java-version: 21
           cache: maven
           cache-dependency-path: backend/counters-api/pom.xml
-      - run: ./mvnw -B verify
+      - run: ./mvnw -B verify jib:buildTar
