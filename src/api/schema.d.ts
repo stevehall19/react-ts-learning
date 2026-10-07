@@ -174,6 +174,15 @@ export interface operations {
           'application/problem+json': components['schemas']['ValidationProblem']
         }
       }
+      /** @description Idempotency-Key is already being processed */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/problem+json': components['schemas']['Problem']
+        }
+      }
       /** @description Idempotency-Key reused */
       422: {
         headers: {
@@ -241,6 +250,15 @@ export interface operations {
       }
       /** @description Counter not found */
       404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/problem+json': components['schemas']['Problem']
+        }
+      }
+      /** @description Idempotency-Key is already being processed */
+      409: {
         headers: {
           [name: string]: unknown
         }

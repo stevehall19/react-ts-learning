@@ -23,6 +23,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
   }
 
+  @ExceptionHandler(IdempotentRequestInProgressException.class)
+  public ProblemDetail handleIdempotencyKeyAlreadyInProgress(IdempotentRequestInProgressException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+  }
+
   @Override
   protected ResponseEntity<Object> handleMethodArgumentNotValid(
     MethodArgumentNotValidException ex,

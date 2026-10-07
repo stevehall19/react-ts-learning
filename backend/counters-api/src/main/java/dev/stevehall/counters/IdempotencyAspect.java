@@ -28,7 +28,6 @@ import java.util.Optional;
 public class IdempotencyAspect {
 
   static final String HEADER = "Idempotency-Key";
-  private static final int MAX_ATTEMPTS = 5;
 
   private final IdempotencyKeyRepository keyRepo;
   private final TransactionTemplate tx;
@@ -53,18 +52,14 @@ public class IdempotencyAspect {
     }
     String hash = requestHash(request, joinPoint.getArgs());
 
-    for (int attempt = 1; ; attempt++) {
-      try {
-        return execute(joinPoint, key, hash);
-      } catch (DuplicateKeyException e) {
-        return replay(key, hash);
-      } catch (CannotAcquireLockException e) {
-        // When the request holding the key rolls back, the requests waiting on it
-        // can deadlock each other on the INSERT. InnoDB rolls the victim back, so retry it.
-        if (attempt == MAX_ATTEMPTS) {
-          throw e;
-        }
-      }
+    try {
+      return execute(joinPoint, key, hash);
+    } catch (DuplicateKeyException e) {
+      return replay(key, hash);
+    } catch (CannotAcquireLockException e) {
+      //The request holding this key rolled back while others waited on it, and the waiters deadlocked on the INSERT.
+      // Tell the client to retry instead of retrying here, which can repeat as many times as there are waiters.
+      throw new IdempotentRequestInProgressException(key);
     }
   }
 

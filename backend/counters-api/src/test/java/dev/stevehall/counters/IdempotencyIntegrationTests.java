@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +21,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -48,23 +51,25 @@ class IdempotencyIntegrationTests {
   }
 
   @Test
-  void concurrentFailedRequestDoesNotUseUpTheKey() throws Exception {
+  void concurrentFailedRequestIsNotFoundOrInProgress() throws Exception {
 
-    var increments = 10;
+    var increments = 30;
     var key = UUID.randomUUID().toString();
     var id = UUID.randomUUID().toString();
 
-    List<Callable<ResultActions>> tasks =
-      Collections.nCopies(increments, () -> mockMvc.perform(post("/api/counters/" + id +"/increment")
-          .header("Idempotency-Key", key))
-        .andExpect(status().isNotFound())
-        .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON)));
+    List<Callable<Integer>> tasks = Collections.nCopies(increments, () ->
+      mockMvc.perform(post("/api/counters/" + id + "/increment").header("Idempotency-Key", key))
+        .andReturn().getResponse().getStatus());
 
-    try (ExecutorService executor = Executors.newFixedThreadPool(10)) {
-      for (Future<ResultActions> result : executor.invokeAll(tasks)) {
-        result.get();
+    List<Integer> statuses = new ArrayList<>();
+    try (ExecutorService executor = Executors.newFixedThreadPool(increments)) {
+      for (Future<Integer> result : executor.invokeAll(tasks)) {
+        statuses.add(result.get());
       }
     }
+
+    assertThat(statuses, everyItem(oneOf(404, 409)));
+    assertThat(statuses, hasItem(404));
   }
 
   @Test

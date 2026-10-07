@@ -53,6 +53,10 @@ public class CounterController {
       description = "Idempotency-Key reused",
       content = @Content(mediaType = "application/problem+json",
         schema = @Schema(implementation = Problem.class))),
+    @ApiResponse(responseCode = "409",
+      description = "Idempotency-Key is already being processed",
+      content = @Content(mediaType = "application/problem+json",
+        schema = @Schema(implementation = Problem.class))),
     @ApiResponse(responseCode = "400", description = "Counter creation failed",
       content = @Content(mediaType = "application/problem+json",
       schema = @Schema(implementation = ValidationProblem.class)))})
@@ -78,6 +82,10 @@ public class CounterController {
         schema = @Schema(implementation = Problem.class))),
     @ApiResponse(responseCode = "422",
       description = "Idempotency-Key reused",
+      content = @Content(mediaType = "application/problem+json",
+        schema = @Schema(implementation = Problem.class))),
+    @ApiResponse(responseCode = "409",
+      description = "Idempotency-Key is already being processed",
       content = @Content(mediaType = "application/problem+json",
         schema = @Schema(implementation = Problem.class))),
     @ApiResponse(responseCode = "200", description = "The counter")})
