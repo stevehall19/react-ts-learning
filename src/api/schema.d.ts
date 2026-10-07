@@ -79,6 +79,15 @@ export interface components {
       /** Format: int32 */
       start?: number
     }
+    Problem: {
+      type?: string
+      title: string
+      /** Format: int32 */
+      status: number
+      detail: string
+      /** Format: uri-reference */
+      instance: string
+    }
     ValidationProblem: {
       type?: string
       title: string
@@ -101,15 +110,6 @@ export interface components {
       start: number
       /** Format: int32 */
       count: number
-    }
-    Problem: {
-      type?: string
-      title: string
-      /** Format: int32 */
-      status: number
-      detail: string
-      /** Format: uri-reference */
-      instance: string
     }
   }
   responses: never
@@ -143,7 +143,10 @@ export interface operations {
   createCounter: {
     parameters: {
       query?: never
-      header?: never
+      header?: {
+        /** @description Optional. A new unique value (e.g. a UUID) per action; resend the same value only when retrying it. */
+        'Idempotency-Key'?: string
+      }
       path?: never
       cookie?: never
     }
@@ -169,6 +172,15 @@ export interface operations {
         }
         content: {
           'application/problem+json': components['schemas']['ValidationProblem']
+        }
+      }
+      /** @description Idempotency-Key reused */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/problem+json': components['schemas']['Problem']
         }
       }
     }
@@ -207,7 +219,10 @@ export interface operations {
   incrementCounter: {
     parameters: {
       query?: never
-      header?: never
+      header?: {
+        /** @description Optional. A new unique value (e.g. a UUID) per action; resend the same value only when retrying it. */
+        'Idempotency-Key'?: string
+      }
       path: {
         id: string
       }
@@ -226,6 +241,15 @@ export interface operations {
       }
       /** @description Counter not found */
       404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/problem+json': components['schemas']['Problem']
+        }
+      }
+      /** @description Idempotency-Key reused */
+      422: {
         headers: {
           [name: string]: unknown
         }

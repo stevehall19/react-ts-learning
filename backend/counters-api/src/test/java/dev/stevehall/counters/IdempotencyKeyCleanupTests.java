@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Import(TestcontainersConfiguration.class)
 @AutoConfigureMockMvc
 @SpringBootTest(properties = "spring.flyway.clean-disabled=false")
-class IdempotencyKeyCleanupTest {
+class IdempotencyKeyCleanupTests {
 
   @Autowired
   JdbcClient jdbc;
