@@ -18,6 +18,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
   }
 
+  @ExceptionHandler(IdempotencyKeyReusedException.class)
+  public ProblemDetail handleIdempotencyKeyReused(IdempotencyKeyReusedException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
+  }
+
   @Override
   protected ResponseEntity<Object> handleMethodArgumentNotValid(
     MethodArgumentNotValidException ex,

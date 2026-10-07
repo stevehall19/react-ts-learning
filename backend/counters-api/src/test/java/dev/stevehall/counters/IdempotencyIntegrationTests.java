@@ -1,0 +1,176 @@
+package dev.stevehall.counters;
+
+import com.jayway.jsonpath.JsonPath;
+import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@Import(TestcontainersConfiguration.class)
+@AutoConfigureMockMvc
+@SpringBootTest(properties = "spring.flyway.clean-disabled=false")
+class IdempotencyIntegrationTests {
+
+  @Autowired
+  CounterService counterService;
+
+  @Autowired
+  CounterRepository counterRepository;
+
+  @Autowired
+  MockMvc mockMvc;
+
+  @Autowired
+  Flyway flyway;
+
+  @BeforeEach
+  void resetDatabase() {
+    flyway.clean();
+    flyway.migrate();
+  }
+
+  @Test
+  void concurrentFailedRequestDoesNotUseUpTheKey() throws Exception {
+
+    var increments = 10;
+    var key = UUID.randomUUID().toString();
+    var id = UUID.randomUUID().toString();
+
+    List<Callable<ResultActions>> tasks =
+      Collections.nCopies(increments, () -> mockMvc.perform(post("/api/counters/" + id +"/increment")
+          .header("Idempotency-Key", key))
+        .andExpect(status().isNotFound())
+        .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON)));
+
+    try (ExecutorService executor = Executors.newFixedThreadPool(10)) {
+      for (Future<ResultActions> result : executor.invokeAll(tasks)) {
+        result.get();
+      }
+    }
+  }
+
+  @Test
+  void failedRequestDoesNotUseUpTheKey() throws Exception {
+    var key = UUID.randomUUID().toString();
+    var missingId = UUID.randomUUID().toString();
+
+    mockMvc.perform(post("/api/counters/" + missingId +"/increment").header("Idempotency-Key", key))
+      .andExpect(status().isNotFound())
+      .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+
+    var counterId = counterService.create("Sevens", 7, 0).getId();
+    mockMvc.perform(post("/api/counters/" + counterId + "/increment").header("Idempotency-Key", key))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.count").value(7));
+  }
+
+  @Test
+  void retriedCreateReturnsTheSameCounter() throws Exception {
+    var key = UUID.randomUUID().toString();
+    var body = """
+      {"label":"Sevens","step":7}
+      """;
+
+    var first = mockMvc.perform(post("/api/counters")
+        .contentType(MediaType.APPLICATION_JSON)
+        .header("Idempotency-Key", key)
+        .content(body))
+      .andExpect(status().isCreated())
+      .andReturn();
+    String firstId = JsonPath.read(first.getResponse().getContentAsString(), "$.id");
+    String firstLocation = first.getResponse().getHeader("Location");
+
+    mockMvc.perform(post("/api/counters")
+        .contentType(MediaType.APPLICATION_JSON)
+        .header("Idempotency-Key", key)
+        .content(body))
+      .andExpect(status().isCreated())
+      .andExpect(header().string("Location", firstLocation))
+      .andExpect(jsonPath("$.id").value(firstId));
+
+    assertEquals(5, counterRepository.count());
+  }
+
+  @Test
+  void reusedKeyWithDifferentBodyIsRejected() throws Exception {
+    var key = UUID.randomUUID().toString();
+    var body = """
+      {"label":"Sevens","step":7}
+      """;
+    var body2 = """
+      {"label":"Sevens","step":8}
+      """;
+
+    mockMvc.perform(post("/api/counters")
+        .contentType(MediaType.APPLICATION_JSON)
+        .header("Idempotency-Key", key)
+        .content(body))
+      .andExpect(status().isCreated());
+
+    mockMvc.perform(post("/api/counters")
+        .contentType(MediaType.APPLICATION_JSON)
+        .header("Idempotency-Key", key)
+        .content(body2))
+      .andExpect(status().isUnprocessableContent())
+      .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+  }
+
+  @Test
+  void retriedIncrementCountsOnce() throws Exception {
+
+    var key = UUID.randomUUID().toString();
+    var step = 7;
+    var id = counterService.create("Sevens", step, 0).getId();
+
+    mockMvc.perform(post("/api/counters/" + id +"/increment").header("Idempotency-Key", key))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.count").value(step));
+
+    mockMvc.perform(post("/api/counters/" + id +"/increment").header("Idempotency-Key", key))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.count").value(step));
+
+    assertEquals(step, counterService.findById(id).getCount());
+  }
+
+  @Test
+  void concurrentRetriesCountOnce() throws Exception {
+
+    var key = UUID.randomUUID().toString();
+    var increments = 10;
+    var step = 7;
+    var id = counterService.create("Sevens", step, 0).getId();
+
+    List<Callable<ResultActions>> tasks =
+      Collections.nCopies(increments, () -> mockMvc.perform(post("/api/counters/" + id +"/increment")
+          .header("Idempotency-Key", key))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.count").value(step)));
+
+    try (ExecutorService executor = Executors.newFixedThreadPool(10)) {
+      for (Future<ResultActions> result : executor.invokeAll(tasks)) {
+        result.get();
+      }
+    }
+
+    assertEquals(step, counterService.findById(id).getCount());
+  }
+}

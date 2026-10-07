@@ -23,6 +23,14 @@ paths:
       tags:
       - Counters
       operationId: createCounter
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        description: Optional. A new unique value (e.g. a UUID) per action; resend
+          the same value only when retrying it.
+        schema:
+          type: string
+          maxLength: 64
       requestBody:
         content:
           application/json:
@@ -36,6 +44,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CounterResponse"
+        "422":
+          description: Idempotency-Key reused
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "400":
           description: Counter creation failed
           content:
@@ -79,9 +93,22 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: Idempotency-Key
+        in: header
+        description: Optional. A new unique value (e.g. a UUID) per action; resend
+          the same value only when retrying it.
+        schema:
+          type: string
+          maxLength: 64
       responses:
         "404":
           description: Counter not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: Idempotency-Key reused
           content:
             application/problem+json:
               schema:
@@ -156,6 +183,26 @@ components:
       required:
       - label
       - step
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+      required:
+      - detail
+      - instance
+      - status
+      - title
     ValidationProblem:
       type: object
       properties:
@@ -204,23 +251,3 @@ components:
       - label
       - start
       - step
-    Problem:
-      type: object
-      properties:
-        type:
-          type: string
-        title:
-          type: string
-        status:
-          type: integer
-          format: int32
-        detail:
-          type: string
-        instance:
-          type: string
-          format: uri-reference
-      required:
-      - detail
-      - instance
-      - status
-      - title
