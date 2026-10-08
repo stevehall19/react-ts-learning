@@ -3,6 +3,7 @@ package dev.stevehall.counters;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -81,9 +82,23 @@ public class CounterController {
       content = @Content(mediaType = "application/problem+json",
         schema = @Schema(implementation = Problem.class))),
     @ApiResponse(responseCode = "422",
-      description = "Idempotency-Key reused",
+      description = "Unprocessable Entity",
       content = @Content(mediaType = "application/problem+json",
-        schema = @Schema(implementation = Problem.class))),
+        schema = @Schema(implementation = Problem.class),
+        examples = {
+          @ExampleObject(
+            name = "IdempotencyKeyReused",
+            summary = "Idempotency-Key reused",
+            description = "The request parameters changed, but the Idempotency-Key was reused.",
+            value = "{\"title\": \"Unprocessable Entity\", \"status\": 422, \"detail\": \"Idempotency key f761e38d-c782-4fa1-9252-78d910c50d3a was already used for a different request\"}"
+          ),
+          @ExampleObject(
+            name = "CounterOverflow",
+            summary = "Increment would overflow the count",
+            description = "New count would exceed max of 2147483647",
+            value = "{\"title\": \"Unprocessable Entity\", \"status\": 422, \"detail\": \"New count would exceed max of 2147483647\"}"
+          )
+        })),
     @ApiResponse(responseCode = "409",
       description = "Idempotency-Key is already being processed",
       content = @Content(mediaType = "application/problem+json",

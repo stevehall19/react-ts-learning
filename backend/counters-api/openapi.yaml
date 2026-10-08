@@ -114,11 +114,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/Problem"
         "422":
-          description: Idempotency-Key reused
+          description: Unprocessable Entity
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+              examples:
+                IdempotencyKeyReused:
+                  summary: Idempotency-Key reused
+                  description: "The request parameters changed, but the Idempotency-Key\
+                    \ was reused."
+                  value:
+                    title: Unprocessable Entity
+                    status: 422
+                    detail: Idempotency key f761e38d-c782-4fa1-9252-78d910c50d3a was
+                      already used for a different request
+                CounterOverflow:
+                  summary: Increment would overflow the count
+                  description: New count would exceed max of 2147483647
+                  value:
+                    title: Unprocessable Entity
+                    status: 422
+                    detail: New count would exceed max of 2147483647
         "409":
           description: Idempotency-Key is already being processed
           content:

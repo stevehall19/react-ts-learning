@@ -60,6 +60,10 @@ public class Counter {
   }
 
   public void increment() {
-    this.count = this.count + this.step;
+    try {
+      this.count = Math.addExact(this.count, this.step);
+    } catch (ArithmeticException e) {
+      throw new CounterOverflowException("New count would exceed max of " + Integer.MAX_VALUE, e);
+    }
   }
 }

@@ -42,4 +42,9 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     ex.getBody().setProperty("errors", errors);
     return handleExceptionInternal(ex, ex.getBody(), headers, status, request);
   }
+
+  @ExceptionHandler(CounterOverflowException.class)
+  public ProblemDetail handleCounterOverflow(CounterOverflowException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
+  }
 }

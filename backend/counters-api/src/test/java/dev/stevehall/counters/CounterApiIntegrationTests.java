@@ -86,6 +86,31 @@ class CounterApiIntegrationTests {
   }
 
   @Test
+  void incrementPastMaxIntReturns422AndKeepsCount() throws Exception {
+    var step = Integer.MAX_VALUE;
+    var start = 10;
+    var result = mockMvc.perform(post("/api/counters")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+        {"label":"Overflow Test","step":%d, "start": %d}
+        """.formatted(step, start)))
+      .andExpect(status().isCreated())
+      .andReturn();
+
+    String responseBody = result.getResponse().getContentAsString();
+    String generatedId = JsonPath.read(responseBody, "$.id");
+
+    mockMvc.perform(post("/api/counters/" + generatedId + "/increment"))
+      .andExpect(status().isUnprocessableContent())
+      .andExpect(jsonPath("$.detail").value("New count would exceed max of " + Integer.MAX_VALUE))
+      .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+
+    mockMvc.perform(get("/api/counters/" + generatedId))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.count").value(start));
+  }
+
+  @Test
   void concurrentIncrementsAreNotLost() throws Exception {
     var step = 7;
     var increments = 20;

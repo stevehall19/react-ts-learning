@@ -266,7 +266,7 @@ export interface operations {
           'application/problem+json': components['schemas']['Problem']
         }
       }
-      /** @description Idempotency-Key reused */
+      /** @description Unprocessable Entity */
       422: {
         headers: {
           [name: string]: unknown
