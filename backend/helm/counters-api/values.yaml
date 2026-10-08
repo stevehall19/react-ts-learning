@@ -57,3 +57,6 @@ database:
   host: counters-db-mariadb
   username: counters
   secretName: counters-db-mariadb
+spring:
+  profiles:
+    active: prod
