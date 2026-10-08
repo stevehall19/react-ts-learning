@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -92,5 +94,16 @@ class CounterControllerTest {
       .andExpect(jsonPath("$.errors.step").isNotEmpty());
 
     verify(counterService, never()).create(any(), anyInt(), anyInt());
+  }
+
+  @Test
+  void unexpectedExceptionReturns500ProblemWithoutMessage() throws Exception {
+    var id = UUID.randomUUID();
+    when(counterService.findById(id)).thenThrow(new RuntimeException("secret detail"));
+
+    mockMvc.perform(get("/api/counters/" + id))
+      .andExpect(status().isInternalServerError())
+      .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+      .andExpect(content().string(not(containsString("secret detail"))));
   }
 }
