@@ -143,7 +143,7 @@ Small tidy-ups the learner was told about but hasn't done:
 
 ## Lesson in progress: Lesson 14, optimistic updates with retries
 
-Chosen by the learner after A10, and paused on 2026-10-08 at their request. Two parts:
+Chosen by the learner after A10, paused on 2026-10-08, then **parked** the same day in favour of the security track (see Next). Part A was committed as `a91fe94` with the items below still open. Two parts:
 
 **Part A, client keys and retries (`countersApi.ts`): nearly done, uncommitted.** `requestWithRetry` wraps `request`: it creates the key once with `crypto.randomUUID()`, adds it via `addHeaderToInit` (which returns a new `RequestInit` with a `Headers` object), makes up to 3 attempts, and rethrows non-retryable errors and the last error. Only `incrementCounter` and `createCounter` use it. Tests so far: increment retries a 409 with the same key (fake timers; the `expect(...).resolves` is created before `advanceTimersByTimeAsync` and awaited after), increment doesn't retry a 404 (one `fetch` call), and create sends `Content-Type` and an `Idempotency-Key` (headers read through `new Headers(init.headers)`, since a plain-object assertion no longer matches). `afterEach` resets timers and spies. The `conflict`, `notFound` and `validationProblem` fixtures are typed with `components['schemas'][…]`.
 
@@ -160,6 +160,10 @@ Still to do in part A:
 **Part B, optimistic increment (`useRemoteCounters.ts`): not started.** Only `increment` becomes optimistic (`add` needs a temporary id; `reset` and `remove` stay pessimistic). The learner was given two questions to think about first: (1) rollback must undo the step rather than restore a snapshot of `items`, or a second click made meanwhile is lost; (2) responses can arrive out of order, so only the latest request for a counter may overwrite its count. Test 4 ("a failed increment rejects and leaves the counters unchanged") must still pass, and the increment test's mock should return 999.
 
 ## Next
+
+**Security track, chosen 2026-10-08 (in progress).** S1 threat model + quick hardening (Actuator exposure, Swagger only outside prod, security headers, catch-all 500 `ProblemDetail`) → S2 Spring Security as an OAuth2 resource server, Keycloak installed in the cluster with Helm (OIDC, JWTs) → S3 per-user counters (Flyway `owner_id`, owner-scoped queries, 404 rather than 403, idempotency keys scoped per user with a red-first replay test) → S4 frontend login (OIDC code flow + PKCE, 401 handling) → S5 supply chain in CI (Dependabot, Trivy on the Jib image, CodeQL) → S6 Kubernetes hardening (`securityContext`, ClusterIP). The learner chose Keycloak over session login and BFF.
+
+Earlier options, still open after the security track:
 
 After Lesson 14, options to offer, in rough order of how naturally they follow:
 
