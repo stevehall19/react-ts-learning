@@ -29,7 +29,9 @@ jobs:
       - run: kind load docker-image counters-api:0.0.1-SNAPSHOT --name counters
 
       - run: |
+          # Google's Docker Hub mirror: the runners hit Docker Hub's anonymous pull limit.
           helm install counters-db backend/helm/mariadb \
+            --set image.repository=mirror.gcr.io/library/mariadb \
             --set auth.password=e2e-password --set auth.rootPassword=e2e-root
           kubectl rollout status statefulset/counters-db-mariadb --timeout=180s
 
@@ -95,9 +97,10 @@ jobs:
           path: playwright-report/
       - if: failure()
         run: |
-          kubectl get pods
-          kubectl logs deployment/counters-api --tail=100
-          kubectl logs deployment/keycloak --tail=100
+          # || true: a step that failed early may have left nothing to describe.
+          kubectl get pods || true
+          kubectl logs deployment/counters-api --tail=100 || true
+          kubectl logs deployment/keycloak --tail=100 || true
 
       - name: Verify Cluster
         run: |
