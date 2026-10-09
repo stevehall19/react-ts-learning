@@ -19,7 +19,8 @@ spring:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/counters}
           jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/counters/protocol/openid-connect/certs}
-
+          audiences:
+            - ${KEYCLOAK_AUDIENCE:counters-api}
 management:
   endpoints:
     web:

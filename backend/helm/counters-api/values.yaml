@@ -60,3 +60,7 @@ database:
 spring:
   profiles:
     active: prod
+keycloak:
+  issuerUri: http://localhost:8180/realms/counters
+  jwkSetUri: http://keycloak:8180/realms/counters/protocol/openid-connect/certs
+  audience: counters-api
