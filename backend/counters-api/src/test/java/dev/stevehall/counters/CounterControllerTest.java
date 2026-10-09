@@ -16,6 +16,7 @@ import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -35,7 +36,8 @@ class CounterControllerTest {
       new Counter("Ones", 1, 0),
       new Counter("Tens", 10, 100)));
 
-    mockMvc.perform(get("/api/counters"))
+    mockMvc.perform(get("/api/counters")
+        .with(jwt()))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.length()").value(2))
       .andExpect(jsonPath("$[1].label").value("Tens"))
@@ -48,7 +50,8 @@ class CounterControllerTest {
     var expectedMessage = String.format("Counter %s not found", id);
     when(counterService.findById(id)).thenThrow(new CounterNotFoundException(id));
 
-    mockMvc.perform(get("/api/counters/" + id))
+    mockMvc.perform(get("/api/counters/" + id)
+        .with(jwt()))
       .andExpect(status().isNotFound())
       .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
       .andExpect(jsonPath("$.detail").value(expectedMessage));
@@ -67,6 +70,7 @@ class CounterControllerTest {
       .thenReturn(counter);
 
     mockMvc.perform(post("/api/counters")
+        .with(jwt())
         .contentType(MediaType.APPLICATION_JSON)
         .content("""
     {"label":"Sevens","step":7}
@@ -84,6 +88,7 @@ class CounterControllerTest {
   void createValidationError() throws Exception {
 
     mockMvc.perform(post("/api/counters")
+        .with(jwt())
         .contentType(MediaType.APPLICATION_JSON)
         .content("""
     {"label":"","step":0}
@@ -101,7 +106,8 @@ class CounterControllerTest {
     var id = UUID.randomUUID();
     when(counterService.findById(id)).thenThrow(new RuntimeException("secret detail"));
 
-    mockMvc.perform(get("/api/counters/" + id))
+    mockMvc.perform(get("/api/counters/" + id)
+        .with(jwt()))
       .andExpect(status().isInternalServerError())
       .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
       .andExpect(content().string(not(containsString("secret detail"))));
