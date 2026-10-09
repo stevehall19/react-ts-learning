@@ -3,7 +3,7 @@
     Gets an access token for a test user from the local Keycloak and prints its decoded claims.
 
 .DESCRIPTION
-    Uses the counters-e2e client's password grant (test only). The password defaults to the
+    Uses a test client's password grant (counters-e2e unless -ClientId says otherwise). The password defaults to the
     user's entry in the committed realm file, so only the test users from that file work
     without -Password.
 
@@ -27,6 +27,9 @@ param(
 
     # Defaults to the user's password in the realm file.
     [string]$Password,
+
+    # Any realm client with direct access grants enabled.
+    [string]$ClientId = 'counters-e2e',
 
     # Print only the encoded access token, for use in an Authorization header.
     [switch]$Raw,
@@ -56,7 +59,7 @@ if ($InCluster) {
     try {
         kubectl run $pod --restart=Never --image=curlimages/curl -- curl -s `
             --data-urlencode grant_type=password `
-            --data-urlencode client_id=counters-e2e `
+            --data-urlencode "client_id=$ClientId" `
             --data-urlencode "username=$User" `
             --data-urlencode "password=$Password" `
             "http://keycloak:8180$tokenPath" | Out-Null
@@ -72,7 +75,7 @@ if ($InCluster) {
 } else {
     $body = @{
         grant_type = 'password'
-        client_id  = 'counters-e2e'
+        client_id  = $ClientId
         username   = $User
         password   = $Password
     }
