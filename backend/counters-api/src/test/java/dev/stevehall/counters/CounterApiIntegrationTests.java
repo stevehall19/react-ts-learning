@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 
 @Import(TestcontainersConfiguration.class)
 @AutoConfigureMockMvc
@@ -51,7 +52,7 @@ class CounterApiIntegrationTests {
 
   @Test
   void verifyAllCountersOrderedByCreatedDate() throws Exception {
-    mockMvc.perform(get("/api/counters"))
+    mockMvc.perform(get("/api/counters").with(jwt()))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.length()").value(4))
       .andExpect(jsonPath("$[*].label").value(contains("Ones", "Threes", "Fives", "Tens")));
@@ -62,6 +63,7 @@ class CounterApiIntegrationTests {
 
     var step = 7;
     var result = mockMvc.perform(post("/api/counters")
+        .with(jwt())
         .contentType(MediaType.APPLICATION_JSON)
         .content("""
     {"label":"Sevens","step":%d}
@@ -72,15 +74,18 @@ class CounterApiIntegrationTests {
     String responseBody = result.getResponse().getContentAsString();
     String generatedId = JsonPath.read(responseBody, "$.id");
 
-    mockMvc.perform(post("/api/counters/" + generatedId +"/increment"))
+    mockMvc.perform(post("/api/counters/" + generatedId +"/increment")
+        .with(jwt()))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.count").value(step));
 
-    mockMvc.perform(post("/api/counters/" + generatedId +"/increment"))
+    mockMvc.perform(post("/api/counters/" + generatedId +"/increment")
+        .with(jwt()))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.count").value(step*2));
 
-    mockMvc.perform(get("/api/counters/" + generatedId))
+    mockMvc.perform(get("/api/counters/" + generatedId)
+        .with(jwt()))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.count").value(step*2));
   }
@@ -90,6 +95,7 @@ class CounterApiIntegrationTests {
     var step = Integer.MAX_VALUE;
     var start = 10;
     var result = mockMvc.perform(post("/api/counters")
+        .with(jwt())
         .contentType(MediaType.APPLICATION_JSON)
         .content("""
         {"label":"Overflow Test","step":%d, "start": %d}
@@ -100,12 +106,14 @@ class CounterApiIntegrationTests {
     String responseBody = result.getResponse().getContentAsString();
     String generatedId = JsonPath.read(responseBody, "$.id");
 
-    mockMvc.perform(post("/api/counters/" + generatedId + "/increment"))
+    mockMvc.perform(post("/api/counters/" + generatedId + "/increment")
+        .with(jwt()))
       .andExpect(status().isUnprocessableContent())
       .andExpect(jsonPath("$.detail").value("New count would exceed max of " + Integer.MAX_VALUE))
       .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
 
-    mockMvc.perform(get("/api/counters/" + generatedId))
+    mockMvc.perform(get("/api/counters/" + generatedId)
+        .with(jwt()))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.count").value(start));
   }
@@ -130,17 +138,20 @@ class CounterApiIntegrationTests {
 
   @Test
   void deleteThenVerify404() throws Exception {
-    var result = mockMvc.perform(get("/api/counters"))
+    var result = mockMvc.perform(get("/api/counters")
+        .with(jwt()))
       .andExpect(status().isOk())
       .andReturn();
 
     String responseBody = result.getResponse().getContentAsString();
     String id = JsonPath.read(responseBody, "$[0].id");
 
-    mockMvc.perform(delete("/api/counters/" + id))
+    mockMvc.perform(delete("/api/counters/" + id)
+        .with(jwt()))
       .andExpect(status().isNoContent());
 
-    mockMvc.perform(get("/api/counters/" + id))
+    mockMvc.perform(get("/api/counters/" + id)
+        .with(jwt()))
       .andExpect(status().isNotFound())
       .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
   }

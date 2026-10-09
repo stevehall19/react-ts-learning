@@ -24,6 +24,7 @@ import java.util.concurrent.Future;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -58,7 +59,9 @@ class IdempotencyIntegrationTests {
     var id = UUID.randomUUID().toString();
 
     List<Callable<Integer>> tasks = Collections.nCopies(increments, () ->
-      mockMvc.perform(post("/api/counters/" + id + "/increment").header("Idempotency-Key", key))
+      mockMvc.perform(post("/api/counters/" + id + "/increment")
+          .with(jwt())
+          .header("Idempotency-Key", key))
         .andReturn().getResponse().getStatus());
 
     List<Integer> statuses = new ArrayList<>();
@@ -77,12 +80,16 @@ class IdempotencyIntegrationTests {
     var key = UUID.randomUUID().toString();
     var missingId = UUID.randomUUID().toString();
 
-    mockMvc.perform(post("/api/counters/" + missingId +"/increment").header("Idempotency-Key", key))
+    mockMvc.perform(post("/api/counters/" + missingId +"/increment")
+        .with(jwt())
+        .header("Idempotency-Key", key))
       .andExpect(status().isNotFound())
       .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
 
     var counterId = counterService.create("Sevens", 7, 0).getId();
-    mockMvc.perform(post("/api/counters/" + counterId + "/increment").header("Idempotency-Key", key))
+    mockMvc.perform(post("/api/counters/" + counterId + "/increment")
+        .header("Idempotency-Key", key)
+        .with(jwt()))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.count").value(7));
   }
@@ -95,6 +102,7 @@ class IdempotencyIntegrationTests {
       """;
 
     var first = mockMvc.perform(post("/api/counters")
+        .with(jwt())
         .contentType(MediaType.APPLICATION_JSON)
         .header("Idempotency-Key", key)
         .content(body))
@@ -104,6 +112,7 @@ class IdempotencyIntegrationTests {
     String firstLocation = first.getResponse().getHeader("Location");
 
     mockMvc.perform(post("/api/counters")
+        .with(jwt())
         .contentType(MediaType.APPLICATION_JSON)
         .header("Idempotency-Key", key)
         .content(body))
@@ -125,12 +134,14 @@ class IdempotencyIntegrationTests {
       """;
 
     mockMvc.perform(post("/api/counters")
+        .with(jwt())
         .contentType(MediaType.APPLICATION_JSON)
         .header("Idempotency-Key", key)
         .content(body))
       .andExpect(status().isCreated());
 
     mockMvc.perform(post("/api/counters")
+        .with(jwt())
         .contentType(MediaType.APPLICATION_JSON)
         .header("Idempotency-Key", key)
         .content(body2))
@@ -145,11 +156,15 @@ class IdempotencyIntegrationTests {
     var step = 7;
     var id = counterService.create("Sevens", step, 0).getId();
 
-    mockMvc.perform(post("/api/counters/" + id +"/increment").header("Idempotency-Key", key))
+    mockMvc.perform(post("/api/counters/" + id +"/increment")
+        .with(jwt())
+        .header("Idempotency-Key", key))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.count").value(step));
 
-    mockMvc.perform(post("/api/counters/" + id +"/increment").header("Idempotency-Key", key))
+    mockMvc.perform(post("/api/counters/" + id +"/increment")
+        .with(jwt())
+        .header("Idempotency-Key", key))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.count").value(step));
 
@@ -166,7 +181,8 @@ class IdempotencyIntegrationTests {
 
     List<Callable<ResultActions>> tasks =
       Collections.nCopies(increments, () -> mockMvc.perform(post("/api/counters/" + id +"/increment")
-          .header("Idempotency-Key", key))
+          .header("Idempotency-Key", key)
+          .with(jwt()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.count").value(step)));
 

@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -25,7 +26,8 @@ class OpenApiSpecTests {
 
   @Test
   void committedSpecMatchesGeneratedSpec() throws Exception {
-    String generated = mockMvc.perform(get("/v3/api-docs.yaml"))
+    String generated = mockMvc.perform(get("/v3/api-docs.yaml")
+        .with(jwt()))
       .andExpect(status().isOk())
       .andReturn()
       .getResponse()
