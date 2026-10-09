@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import static dev.stevehall.counters.TestUsers.ALICE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -86,7 +87,7 @@ class IdempotencyIntegrationTests {
       .andExpect(status().isNotFound())
       .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
 
-    var counterId = counterService.create("Sevens", 7, 0).getId();
+    var counterId = counterService.create("Sevens", 7, 0, ALICE).getId();
     mockMvc.perform(post("/api/counters/" + counterId + "/increment")
         .header("Idempotency-Key", key)
         .with(jwt()))
@@ -154,7 +155,7 @@ class IdempotencyIntegrationTests {
 
     var key = UUID.randomUUID().toString();
     var step = 7;
-    var id = counterService.create("Sevens", step, 0).getId();
+    var id = counterService.create("Sevens", step, 0, ALICE).getId();
 
     mockMvc.perform(post("/api/counters/" + id +"/increment")
         .with(jwt())
@@ -177,7 +178,7 @@ class IdempotencyIntegrationTests {
     var key = UUID.randomUUID().toString();
     var increments = 10;
     var step = 7;
-    var id = counterService.create("Sevens", step, 0).getId();
+    var id = counterService.create("Sevens", step, 0, ALICE).getId();
 
     List<Callable<ResultActions>> tasks =
       Collections.nCopies(increments, () -> mockMvc.perform(post("/api/counters/" + id +"/increment")

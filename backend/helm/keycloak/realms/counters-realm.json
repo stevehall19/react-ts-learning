@@ -29,6 +29,7 @@
   "users": [
     {
       "username": "alice",
+      "id": "4d67a23b-a34f-4a0c-9dec-97acde26dfd6",
       "enabled": true,
       "email": "alice@example.com",
       "emailVerified": true,
@@ -44,6 +45,7 @@
     },
     {
       "username": "bob",
+      "id": "bb5920c2-4da8-4f3e-ad20-34aeafb961dc",
       "enabled": true,
       "email": "bob@example.com",
       "emailVerified": true,

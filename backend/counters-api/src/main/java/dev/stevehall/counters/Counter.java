@@ -12,6 +12,8 @@ public class Counter {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
+  @Column(updatable = false)
+  private String ownerId;
   @Column
   private String label;
   @Column
@@ -25,14 +27,19 @@ public class Counter {
 
   protected Counter() {}
 
-  public Counter(String label, int step, int start) {
+  public Counter(String label, int step, int start, String ownerId) {
     this.label = label;
     this.step = step;
     this.start = start;
     this.count = start;
+    this.ownerId = ownerId;
   }
   public UUID getId() {
     return id;
+  }
+
+  public String getOwnerId() {
+    return ownerId;
   }
 
   public String getLabel() {

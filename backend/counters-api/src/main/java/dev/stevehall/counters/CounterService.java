@@ -26,8 +26,8 @@ public class CounterService {
   }
 
   @Transactional
-  public Counter create(String label, int step, int start) {
-    return counterRepository.save(new Counter(label, step, start));
+  public Counter create(String label, int step, int start, String ownerId) {
+    return counterRepository.save(new Counter(label, step, start, ownerId));
   }
 
   @Transactional

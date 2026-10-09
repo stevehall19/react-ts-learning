@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.UUID;
 
+import static dev.stevehall.counters.TestUsers.ALICE;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.containsString;
@@ -33,8 +34,8 @@ class CounterControllerTest {
   @Test
   void listReturnsCountersFromService() throws Exception {
     when(counterService.findAll()).thenReturn(List.of(
-      new Counter("Ones", 1, 0),
-      new Counter("Tens", 10, 100)));
+      new Counter("Ones", 1, 0, ALICE),
+      new Counter("Tens", 10, 100, ALICE)));
 
     mockMvc.perform(get("/api/counters")
         .with(jwt()))
@@ -64,13 +65,13 @@ class CounterControllerTest {
     var step = 7;
     var start = 0;
     var id = UUID.randomUUID();
-    var counter = new Counter(label, step, start);
+    var counter = new Counter(label, step, start, ALICE);
     ReflectionTestUtils.setField(counter, "id", id);
-    when(counterService.create(label, step, start))
+    when(counterService.create(label, step, start, ALICE))
       .thenReturn(counter);
 
     mockMvc.perform(post("/api/counters")
-        .with(jwt())
+        .with(jwt().jwt(j -> j.subject(ALICE)))
         .contentType(MediaType.APPLICATION_JSON)
         .content("""
     {"label":"Sevens","step":7}
@@ -81,7 +82,7 @@ class CounterControllerTest {
       .andExpect(jsonPath("$.step").value(7))
       .andExpect(jsonPath("$.count").value(0));
 
-    verify(counterService).create(label, step, start);
+    verify(counterService).create(label, step, start, ALICE);
   }
 
   @Test
@@ -98,7 +99,7 @@ class CounterControllerTest {
       .andExpect(jsonPath("$.errors.label").isNotEmpty())
       .andExpect(jsonPath("$.errors.step").isNotEmpty());
 
-    verify(counterService, never()).create(any(), anyInt(), anyInt());
+    verify(counterService, never()).create(any(), anyInt(), anyInt(), any());
   }
 
   @Test
