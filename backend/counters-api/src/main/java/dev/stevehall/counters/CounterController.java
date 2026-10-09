@@ -12,6 +12,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -64,9 +66,9 @@ public class CounterController {
   @Parameter(in = ParameterIn.HEADER, name = "Idempotency-Key",
     description = "Optional. A new unique value (e.g. a UUID) per action; resend the same value only when retrying it.",
     schema = @Schema(type = "string", maxLength = 64))
-  public ResponseEntity<CounterResponse> createCounter(@Valid @RequestBody CreateCounterRequest request) {
+  public ResponseEntity<CounterResponse> createCounter(@Valid @RequestBody CreateCounterRequest request, @AuthenticationPrincipal Jwt jwt) {
     var response = CounterResponse.from(counterService
-      .create(request.label(), request.step(), request.start()));
+      .create(request.label(), request.step(), request.start(), jwt.getSubject()));
     URI location = ServletUriComponentsBuilder.fromCurrentRequest()
       .path("/{id}")
       .buildAndExpand(response.id())
