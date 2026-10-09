@@ -140,7 +140,8 @@
             </pluginExtension>
           </pluginExtensions>
           <from>
-            <image>eclipse-temurin:21-jre</image>
+            <!-- Google's Docker Hub mirror: CI runners hit Docker Hub's anonymous pull limit. -->
+            <image>mirror.gcr.io/library/eclipse-temurin:21-jre</image>
           </from>
           <to>
             <image>counters-api</image>
