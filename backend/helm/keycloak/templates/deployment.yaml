@@ -13,6 +13,8 @@ spec:
     metadata:
       labels:
       {{- include "keycloak.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/realm: {{ .Files.Get "realms/counters-realm.json" | sha256sum }}
     spec:
       containers:
         - name: keycloak
