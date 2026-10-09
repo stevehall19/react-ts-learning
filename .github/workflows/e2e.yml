@@ -34,15 +34,51 @@ jobs:
           kubectl rollout status statefulset/counters-db-mariadb --timeout=180s
 
       - run: |
+          helm install keycloak backend/helm/keycloak \
+            --set auth.admin.username=admin --set auth.admin.password=password
+          kubectl rollout status deployment/keycloak --timeout=400s
+
+      - run: |
           helm install counters-api backend/helm/counters-api
           kubectl rollout status deployment/counters-api --timeout=180s
 
       - run: |
           kubectl port-forward svc/counters-api 8080:8080 > port-forward.log 2>&1 &
+          SUCCESS=false
           for i in $(seq 1 30); do
-            curl -sf localhost:8080/actuator/health/readiness && break
+            if curl -sf -o /dev/null localhost:8080/actuator/health/readiness; then
+              SUCCESS=true
+              break
+            fi
             sleep 1
           done
+
+          if [ "$SUCCESS" = false ]; then
+            echo "Error: counters-api failed to become ready." >&2
+            cat port-forward.log >&2
+            exit 1
+          fi
+
+          echo "counters-api is ready!"
+
+      - run: |
+          kubectl port-forward svc/keycloak 8180:8180 > keycloak-port-forward.log 2>&1 &
+          SUCCESS=false
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null localhost:8180/realms/counters/.well-known/openid-configuration; then
+              SUCCESS=true
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$SUCCESS" = false ]; then
+            echo "Error: Keycloak failed to become ready." >&2
+            cat keycloak-port-forward.log >&2
+            exit 1
+          fi
+
+          echo "Keycloak is ready!"
 
       - uses: actions/setup-node@v7
         with:
@@ -61,6 +97,7 @@ jobs:
         run: |
           kubectl get pods
           kubectl logs deployment/counters-api --tail=100
+          kubectl logs deployment/keycloak --tail=100
 
       - name: Verify Cluster
         run: |
