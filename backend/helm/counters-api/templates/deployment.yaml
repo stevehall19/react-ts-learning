@@ -36,6 +36,12 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: {{ .Values.spring.profiles.active | quote }}
+            - name: KEYCLOAK_ISSUER_URI
+              value: {{ .Values.keycloak.issuerUri | quote }}
+            - name: KEYCLOAK_JWK_SET_URI
+              value: {{ .Values.keycloak.jwkSetUri | quote }}
+            - name: KEYCLOAK_AUDIENCE
+              value: {{ .Values.keycloak.audience | quote }}
             - name: DB_HOST
               value: {{ .Values.database.host | quote }}
             - name: DB_USERNAME
