@@ -83,7 +83,7 @@ class CounterApiIntegrationTests {
 
   @Test
   void listsDontContainOtherUsersCounters() throws Exception {
-    
+
     mockMvc.perform(post("/api/counters")
         .with(jwt().jwt(j -> j.subject(ALICE)))
         .contentType(MediaType.APPLICATION_JSON)

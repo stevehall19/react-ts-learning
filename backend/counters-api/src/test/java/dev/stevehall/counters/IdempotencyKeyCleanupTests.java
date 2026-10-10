@@ -12,6 +12,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import java.time.Duration;
 import java.util.UUID;
 
+import static dev.stevehall.counters.TestUsers.ALICE;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Import(TestcontainersConfiguration.class)
@@ -41,18 +42,18 @@ class IdempotencyKeyCleanupTests {
     var expiredKey = UUID.randomUUID().toString();
     var freshKey = UUID.randomUUID().toString();
     jdbc.sql("""
-    INSERT INTO idempotency_key (idem_key, request_hash, status_code, response_body, created_at)
-    VALUES (?, ?, 200, '{}', NOW() - INTERVAL ? SECOND)""")
-      .params(expiredKey, "hash", Duration.ofHours(25).toSeconds())
+    INSERT INTO idempotency_key (owner_id, idem_key, request_hash, status_code, response_body, created_at)
+    VALUES (?, ?, ?, 200, '{}', NOW() - INTERVAL ? SECOND)""")
+      .params(ALICE, expiredKey, "hash", Duration.ofHours(25).toSeconds())
       .update();
     jdbc.sql("""
-    INSERT INTO idempotency_key (idem_key, request_hash, status_code, response_body, created_at)
-    VALUES (?, ?, 200, '{}', NOW())""")
-      .params(freshKey, "hash")
+    INSERT INTO idempotency_key (owner_id, idem_key, request_hash, status_code, response_body, created_at)
+    VALUES (?, ?, ?, 200, '{}', NOW())""")
+      .params(ALICE, freshKey, "hash")
       .update();
     task.cleanupOldKeys();
 
-    assertTrue(keyRepo.find(expiredKey).isEmpty());
-    assertTrue(keyRepo.find(freshKey).isPresent());
+    assertTrue(keyRepo.find(expiredKey, ALICE).isEmpty());
+    assertTrue(keyRepo.find(freshKey, ALICE).isPresent());
   }
 }

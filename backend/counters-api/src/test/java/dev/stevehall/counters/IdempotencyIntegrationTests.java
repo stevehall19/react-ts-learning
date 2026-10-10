@@ -22,9 +22,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static dev.stevehall.counters.TestUsers.ALICE;
+import static dev.stevehall.counters.TestUsers.BOB;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -109,6 +111,7 @@ class IdempotencyIntegrationTests {
         .content(body))
       .andExpect(status().isCreated())
       .andReturn();
+
     String firstId = JsonPath.read(first.getResponse().getContentAsString(), "$.id");
     String firstLocation = first.getResponse().getHeader("Location");
 
@@ -148,6 +151,91 @@ class IdempotencyIntegrationTests {
         .content(body2))
       .andExpect(status().isUnprocessableContent())
       .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+  }
+
+  @Test
+  void retriedKeyBySameUserWithRefreshedTokenIsAccepted() throws Exception {
+
+    var key = UUID.randomUUID().toString();
+    var step = 7;
+    var id = counterService.create("Sevens", step, 0, ALICE).getId();
+
+    mockMvc.perform(post("/api/counters/" + id +"/increment")
+        .with(jwt().jwt(j -> j.subject(ALICE)))
+        .header("Idempotency-Key", key))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.count").value(step));
+
+    mockMvc.perform(post("/api/counters/" + id +"/increment")
+        .with(jwt().jwt(j -> j.subject(ALICE).tokenValue(UUID.randomUUID().toString())))
+        .header("Idempotency-Key", key))
+      .andExpect(status().isOk())
+      .andExpect(header().string("Idempotent-Replayed", "true"))
+      .andExpect(jsonPath("$.count").value(step));
+
+    assertEquals(step, counterService.findById(id, ALICE).getCount());
+  }
+
+  @Test
+  void usersWithSameKeysGetTheirOwnResults() throws Exception {
+
+    var key = UUID.randomUUID().toString();
+    var body = """
+      {"label":"Sevens","step":7}
+      """;
+
+    var first = mockMvc.perform(post("/api/counters")
+        .with(jwt().jwt(j -> j.subject(ALICE)))
+        .contentType(MediaType.APPLICATION_JSON)
+        .header("Idempotency-Key", key)
+        .content(body))
+      .andExpect(status().isCreated())
+      .andReturn();
+
+    String firstId = JsonPath.read(first.getResponse().getContentAsString(), "$.id");
+
+    var second = mockMvc.perform(post("/api/counters")
+        .with(jwt().jwt(j -> j.subject(BOB)))
+        .contentType(MediaType.APPLICATION_JSON)
+        .header("Idempotency-Key", key)
+        .content(body))
+      .andExpect(status().isCreated())
+      .andExpect(header().doesNotExist("Idempotent-Replayed"))
+      .andReturn();
+
+    String secondId = JsonPath.read(second.getResponse().getContentAsString(), "$.id");
+    assertNotEquals(firstId, secondId);
+
+    mockMvc.perform(post("/api/counters")
+        .with(jwt().jwt(j -> j.subject(BOB)))
+        .contentType(MediaType.APPLICATION_JSON)
+        .header("Idempotency-Key", key)
+        .content(body))
+      .andExpect(status().isCreated())
+      .andExpect(header().string("Idempotent-Replayed", "true"))
+      .andExpect(jsonPath("$.id").value(secondId));
+  }
+
+  @Test
+  void retriedKeyByDifferentUserIsNotFound() throws Exception {
+
+    var key = UUID.randomUUID().toString();
+    var step = 7;
+    var id = counterService.create("Sevens", step, 0, ALICE).getId();
+
+    mockMvc.perform(post("/api/counters/" + id +"/increment")
+        .with(jwt().jwt(j -> j.subject(ALICE)))
+        .header("Idempotency-Key", key))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.count").value(step));
+
+    mockMvc.perform(post("/api/counters/" + id +"/increment")
+        .with(jwt().jwt(j -> j.subject(BOB)))
+        .header("Idempotency-Key", key))
+      .andExpect(status().isNotFound())
+      .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+
+    assertEquals(step, counterService.findById(id, ALICE).getCount());
   }
 
   @Test

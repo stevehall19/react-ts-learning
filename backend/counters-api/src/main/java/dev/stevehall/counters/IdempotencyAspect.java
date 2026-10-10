@@ -10,6 +10,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -20,6 +23,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.Optional;
 
@@ -51,11 +55,12 @@ public class IdempotencyAspect {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, HEADER + " must be 1 to 64 characters");
     }
     String hash = requestHash(request, joinPoint.getArgs());
+    String ownerId = currentOwnerId();
 
     try {
-      return execute(joinPoint, key, hash);
+      return execute(joinPoint, key, hash, ownerId);
     } catch (DuplicateKeyException e) {
-      return replay(key, hash);
+      return replay(key, hash, ownerId);
     } catch (CannotAcquireLockException e) {
       //The request holding this key rolled back while others waited on it, and the waiters deadlocked on the INSERT.
       // Tell the client to retry instead of retrying here, which can repeat as many times as there are waiters.
@@ -65,19 +70,19 @@ public class IdempotencyAspect {
 
   // One transaction: claim the key, run the handler, store the response.
   // A concurrent request with the same key blocks on the INSERT until this commits.
-  private ResponseEntity<?> execute(ProceedingJoinPoint joinPoint, String key, String hash) {
+  private ResponseEntity<?> execute(ProceedingJoinPoint joinPoint, String key, String hash, String ownerId) {
     return tx.execute(status -> {
-      keyRepo.claim(key, hash);
+      keyRepo.claim(key, hash, ownerId);
       ResponseEntity<?> response = proceed(joinPoint);
       keyRepo.saveResponse(key, response.getStatusCode().value(),
         response.getHeaders().getFirst(HttpHeaders.LOCATION),
-        objectMapper.writeValueAsString(response.getBody()));
+        objectMapper.writeValueAsString(response.getBody()), ownerId);
       return response;
     });
   }
 
-  private ResponseEntity<String> replay(String key, String hash) {
-    Optional<StoredResponse> storedOptional = keyRepo.find(key);
+  private ResponseEntity<String> replay(String key, String hash, String ownerId) {
+    Optional<StoredResponse> storedOptional = keyRepo.find(key, ownerId);
 
     var stored = storedOptional.orElseThrow(() -> new IllegalStateException("Key not found: " + key));
     if (!stored.requestHash().equals(hash)) {
@@ -103,12 +108,21 @@ public class IdempotencyAspect {
   }
 
   private String requestHash(HttpServletRequest request, Object[] args) {
-    var input = request.getMethod() + " " + request.getRequestURI() + " " + objectMapper.writeValueAsString(args);
+    // The caller's token isn't part of the request: a retry with a refreshed token is the same request.
+    var requestArgs = Arrays.stream(args).filter(arg -> !(arg instanceof Jwt)).toList();
+    var input = request.getMethod() + " " + request.getRequestURI() + " " + objectMapper.writeValueAsString(requestArgs);
     try {
       var digest = MessageDigest.getInstance("SHA-256").digest(input.getBytes(StandardCharsets.UTF_8));
       return HexFormat.of().formatHex(digest);
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException(e);
     }
+  }
+
+  private static String currentOwnerId() {
+    if (SecurityContextHolder.getContext().getAuthentication() instanceof JwtAuthenticationToken token) {
+      return token.getToken().getSubject();
+    }
+    throw new IllegalStateException("@Idempotent endpoints need a JWT-authenticated request");
   }
 }
