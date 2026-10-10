@@ -1,5 +1,6 @@
 import type { components } from './api/schema'
 import { type CounterItem, isCounterItem, isCounterItems } from './types'
+import { userManager } from './auth'
 
 type ValidationErrors = components['schemas']['ValidationProblem']['errors']
 
@@ -56,7 +57,19 @@ async function requestWithRetry(
 }
 
 async function request(path: string, init?: RequestInit): Promise<unknown> {
-  const response = await fetch(path, init)
+  const user = await userManager?.getUser()
+  const authorizedInit = user?.access_token
+    ? addHeaderToInit(init, 'Authorization', `Bearer ${user.access_token}`)
+    : init
+  const response = await fetch(path, authorizedInit)
+
+  // A 401 with no token, or an expired one that couldn't be renewed (Keycloak's
+  // session ended): sign in again. Not awaited: the promise only settles if the user
+  // comes back to this page. A 401 for a token that hasn't expired means the API
+  // rejects it, so redirecting would loop; that one is just reported.
+  if (response.status === 401 && userManager && (!user || user.expired)) {
+    void userManager.signinRedirect()
+  }
 
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null)
