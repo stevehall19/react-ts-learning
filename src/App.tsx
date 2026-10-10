@@ -4,9 +4,37 @@ import { CountersProvider } from './CountersProvider'
 import CounterPage from './pages/CounterPage'
 import NotFound from './pages/NotFound'
 import { useCountersContext } from './CountersContext'
+import { apiEnabled } from './common'
+import { useAutoSignin } from 'react-oidc-context'
+
+// Signs the user in before anything below it renders: the counters only load once
+// there is a user. useAutoSignin redirects to Keycloak from an effect, once.
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { isLoading, isAuthenticated, error } = useAutoSignin()
+
+  if (error) {
+    return (
+      <p className="px-4 py-8 text-red-600">
+        Couldn't sign in: {error.message}
+      </p>
+    )
+  }
+  if (isLoading || !isAuthenticated) {
+    return <p className="px-4 py-8">Signing in…</p>
+  }
+  return children
+}
+
+function NoGate({ children }: { children: React.ReactNode }) {
+  return children
+}
+
+// Chosen once, like useCountersImpl: the Pages build has no AuthProvider to gate on.
+const Gate = apiEnabled ? AuthGate : NoGate
 
 function Layout() {
   const { status, error } = useCountersContext()
+
   return (
     <div>
       <nav>
@@ -25,15 +53,17 @@ function Layout() {
 
 function App() {
   return (
-    <CountersProvider>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<HomePage />} />
-          <Route path="counters/:id" element={<CounterPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Route>
-      </Routes>
-    </CountersProvider>
+    <Gate>
+      <CountersProvider>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route index element={<HomePage />} />
+            <Route path="counters/:id" element={<CounterPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </CountersProvider>
+    </Gate>
   )
 }
 
