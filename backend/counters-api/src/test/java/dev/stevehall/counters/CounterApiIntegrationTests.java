@@ -54,7 +54,7 @@ class CounterApiIntegrationTests {
 
   @Test
   void verifyAllCountersOrderedByCreatedDate() throws Exception {
-    mockMvc.perform(get("/api/counters").with(jwt()))
+    mockMvc.perform(get("/api/counters").with(jwt().jwt(j -> j.subject(ALICE))))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.length()").value(4))
       .andExpect(jsonPath("$[*].label").value(contains("Ones", "Threes", "Fives", "Tens")));
@@ -79,6 +79,23 @@ class CounterApiIntegrationTests {
     mockMvc.perform(get("/api/counters/" + generatedId)
         .with(jwt().jwt(j -> j.subject(BOB))))
       .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void listsDontContainOtherUsersCounters() throws Exception {
+    
+    mockMvc.perform(post("/api/counters")
+        .with(jwt().jwt(j -> j.subject(ALICE)))
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+    {"label":"Sevens","step": 7}
+    """))
+      .andExpect(status().isCreated());
+
+    mockMvc.perform(get("/api/counters")
+        .with(jwt().jwt(j -> j.subject(BOB))))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.length()").value(0));
   }
 
   @Test
@@ -111,6 +128,53 @@ class CounterApiIntegrationTests {
         .with(jwt().jwt(j -> j.subject(ALICE))))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.count").value(step*2));
+  }
+
+  @Test
+  void usersCantModifyOtherUsersCounters() throws Exception {
+
+    var step = 7;
+    var result = mockMvc.perform(post("/api/counters")
+        .with(jwt().jwt(j -> j.subject(ALICE)))
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+    {"label":"Sevens","step":%d}
+    """.formatted(step)))
+      .andExpect(status().isCreated())
+      .andReturn();
+
+    String responseBody = result.getResponse().getContentAsString();
+    String generatedId = JsonPath.read(responseBody, "$.id");
+
+    mockMvc.perform(post("/api/counters/" + generatedId +"/increment")
+        .with(jwt().jwt(j -> j.subject(ALICE))))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.count").value(step));
+
+    mockMvc.perform(post("/api/counters/" + generatedId +"/increment")
+        .with(jwt().jwt(j -> j.subject(BOB))))
+      .andExpect(status().isNotFound())
+      .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+
+    mockMvc.perform(post("/api/counters/" + generatedId +"/reset")
+        .with(jwt().jwt(j -> j.subject(BOB))))
+      .andExpect(status().isNotFound())
+      .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+
+    mockMvc.perform(delete("/api/counters/" + generatedId)
+        .with(jwt().jwt(j -> j.subject(BOB))))
+      .andExpect(status().isNotFound())
+      .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+
+    mockMvc.perform(post("/api/counters/" + generatedId +"/increment")
+        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))))
+      .andExpect(status().isNotFound())
+      .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+
+    mockMvc.perform(get("/api/counters/" + generatedId)
+        .with(jwt().jwt(j -> j.subject(ALICE))))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.count").value(step));
   }
 
   @Test
@@ -148,7 +212,7 @@ class CounterApiIntegrationTests {
     UUID id = counterService.create("Sevens", step, 0, ALICE).getId();
 
     List<Callable<Counter>> tasks =
-      Collections.nCopies(increments, () -> counterService.increment(id));
+      Collections.nCopies(increments, () -> counterService.increment(id, ALICE));
 
     try (ExecutorService executor = Executors.newFixedThreadPool(10)) {
       for (Future<Counter> result : executor.invokeAll(tasks)) {
@@ -156,7 +220,7 @@ class CounterApiIntegrationTests {
       }
     }
 
-    assertEquals(increments * step, counterService.findById(id).getCount());
+    assertEquals(increments * step, counterService.findById(id, ALICE).getCount());
   }
 
   @Test

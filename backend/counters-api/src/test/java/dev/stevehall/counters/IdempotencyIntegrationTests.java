@@ -82,7 +82,7 @@ class IdempotencyIntegrationTests {
     var missingId = UUID.randomUUID().toString();
 
     mockMvc.perform(post("/api/counters/" + missingId +"/increment")
-        .with(jwt())
+        .with(jwt().jwt(j -> j.subject(ALICE)))
         .header("Idempotency-Key", key))
       .andExpect(status().isNotFound())
       .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
@@ -90,7 +90,7 @@ class IdempotencyIntegrationTests {
     var counterId = counterService.create("Sevens", 7, 0, ALICE).getId();
     mockMvc.perform(post("/api/counters/" + counterId + "/increment")
         .header("Idempotency-Key", key)
-        .with(jwt()))
+        .with(jwt().jwt(j -> j.subject(ALICE))))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.count").value(7));
   }
@@ -103,7 +103,7 @@ class IdempotencyIntegrationTests {
       """;
 
     var first = mockMvc.perform(post("/api/counters")
-        .with(jwt())
+        .with(jwt().jwt(j -> j.subject(ALICE)))
         .contentType(MediaType.APPLICATION_JSON)
         .header("Idempotency-Key", key)
         .content(body))
@@ -113,7 +113,7 @@ class IdempotencyIntegrationTests {
     String firstLocation = first.getResponse().getHeader("Location");
 
     mockMvc.perform(post("/api/counters")
-        .with(jwt())
+        .with(jwt().jwt(j -> j.subject(ALICE)))
         .contentType(MediaType.APPLICATION_JSON)
         .header("Idempotency-Key", key)
         .content(body))
@@ -135,14 +135,14 @@ class IdempotencyIntegrationTests {
       """;
 
     mockMvc.perform(post("/api/counters")
-        .with(jwt())
+        .with(jwt().jwt(j -> j.subject(ALICE)))
         .contentType(MediaType.APPLICATION_JSON)
         .header("Idempotency-Key", key)
         .content(body))
       .andExpect(status().isCreated());
 
     mockMvc.perform(post("/api/counters")
-        .with(jwt())
+        .with(jwt().jwt(j -> j.subject(ALICE)))
         .contentType(MediaType.APPLICATION_JSON)
         .header("Idempotency-Key", key)
         .content(body2))
@@ -158,18 +158,18 @@ class IdempotencyIntegrationTests {
     var id = counterService.create("Sevens", step, 0, ALICE).getId();
 
     mockMvc.perform(post("/api/counters/" + id +"/increment")
-        .with(jwt())
+        .with(jwt().jwt(j -> j.subject(ALICE)))
         .header("Idempotency-Key", key))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.count").value(step));
 
     mockMvc.perform(post("/api/counters/" + id +"/increment")
-        .with(jwt())
+        .with(jwt().jwt(j -> j.subject(ALICE)))
         .header("Idempotency-Key", key))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.count").value(step));
 
-    assertEquals(step, counterService.findById(id).getCount());
+    assertEquals(step, counterService.findById(id, ALICE).getCount());
   }
 
   @Test
@@ -183,7 +183,7 @@ class IdempotencyIntegrationTests {
     List<Callable<ResultActions>> tasks =
       Collections.nCopies(increments, () -> mockMvc.perform(post("/api/counters/" + id +"/increment")
           .header("Idempotency-Key", key)
-          .with(jwt()))
+          .with(jwt().jwt(j -> j.subject(ALICE))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.count").value(step)));
 
@@ -193,6 +193,6 @@ class IdempotencyIntegrationTests {
       }
     }
 
-    assertEquals(step, counterService.findById(id).getCount());
+    assertEquals(step, counterService.findById(id, ALICE).getCount());
   }
 }
