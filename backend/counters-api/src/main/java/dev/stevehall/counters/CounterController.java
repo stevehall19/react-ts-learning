@@ -33,8 +33,8 @@ public class CounterController {
   }
 
   @GetMapping
-  public List<CounterResponse> getCounters() {
-    return counterService.findAll().stream().map(CounterResponse::from).toList();
+  public List<CounterResponse> getCounters(@AuthenticationPrincipal Jwt jwt) {
+    return counterService.findAll(jwt.getSubject()).stream().map(CounterResponse::from).toList();
   }
 
   @GetMapping("{id}")
@@ -44,8 +44,8 @@ public class CounterController {
       content = @Content(mediaType = "application/problem+json",
         schema = @Schema(implementation = Problem.class))),
     @ApiResponse(responseCode = "200", description = "The counter")})
-  public CounterResponse getCounter(@PathVariable UUID id) {
-    return CounterResponse.from(counterService.findById(id));
+  public CounterResponse getCounter(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+    return CounterResponse.from(counterService.findById(id, jwt.getSubject()));
   }
 
   @Idempotent
@@ -109,8 +109,8 @@ public class CounterController {
   @Parameter(in = ParameterIn.HEADER, name = "Idempotency-Key",
     description = "Optional. A new unique value (e.g. a UUID) per action; resend the same value only when retrying it.",
     schema = @Schema(type = "string", maxLength = 64))
-  public ResponseEntity<CounterResponse> incrementCounter(@PathVariable UUID id) {
-    return ResponseEntity.ok(CounterResponse.from(counterService.increment(id)));
+  public ResponseEntity<CounterResponse> incrementCounter(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+    return ResponseEntity.ok(CounterResponse.from(counterService.increment(id, jwt.getSubject())));
   }
 
   @PostMapping("{id}/reset")
@@ -120,9 +120,9 @@ public class CounterController {
       content = @Content(mediaType = "application/problem+json",
         schema = @Schema(implementation = Problem.class))),
     @ApiResponse(responseCode = "200", description = "The counter")})
-  public CounterResponse resetCounter(@PathVariable UUID id) {
+  public CounterResponse resetCounter(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
     return CounterResponse.from(counterService
-      .reset(id));
+      .reset(id, jwt.getSubject()));
   }
 
   @DeleteMapping("{id}")
@@ -133,7 +133,7 @@ public class CounterController {
       content = @Content(mediaType = "application/problem+json",
         schema = @Schema(implementation = Problem.class))),
     @ApiResponse(responseCode = "204", description = "Counter deleted")})
-  public void deleteCounter(@PathVariable UUID id) {
-    counterService.delete(id);
+  public void deleteCounter(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+    counterService.delete(id, jwt.getSubject());
   }
 }

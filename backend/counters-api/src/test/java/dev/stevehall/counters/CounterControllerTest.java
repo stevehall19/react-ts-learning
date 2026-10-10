@@ -33,12 +33,12 @@ class CounterControllerTest {
 
   @Test
   void listReturnsCountersFromService() throws Exception {
-    when(counterService.findAll()).thenReturn(List.of(
+    when(counterService.findAll(ALICE)).thenReturn(List.of(
       new Counter("Ones", 1, 0, ALICE),
       new Counter("Tens", 10, 100, ALICE)));
 
     mockMvc.perform(get("/api/counters")
-        .with(jwt()))
+        .with(jwt().jwt(j -> j.subject(ALICE))))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.length()").value(2))
       .andExpect(jsonPath("$[1].label").value("Tens"))
@@ -49,10 +49,10 @@ class CounterControllerTest {
   void unknownIdReturns404ProblemDetail() throws Exception {
     var id = UUID.randomUUID();
     var expectedMessage = String.format("Counter %s not found", id);
-    when(counterService.findById(id)).thenThrow(new CounterNotFoundException(id));
+    when(counterService.findById(id, ALICE)).thenThrow(new CounterNotFoundException(id));
 
     mockMvc.perform(get("/api/counters/" + id)
-        .with(jwt()))
+        .with(jwt().jwt(j -> j.subject(ALICE))))
       .andExpect(status().isNotFound())
       .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
       .andExpect(jsonPath("$.detail").value(expectedMessage));
@@ -89,7 +89,7 @@ class CounterControllerTest {
   void createValidationError() throws Exception {
 
     mockMvc.perform(post("/api/counters")
-        .with(jwt())
+        .with(jwt().jwt(j -> j.subject(ALICE)))
         .contentType(MediaType.APPLICATION_JSON)
         .content("""
     {"label":"","step":0}
@@ -105,10 +105,10 @@ class CounterControllerTest {
   @Test
   void unexpectedExceptionReturns500ProblemWithoutMessage() throws Exception {
     var id = UUID.randomUUID();
-    when(counterService.findById(id)).thenThrow(new RuntimeException("secret detail"));
+    when(counterService.findById(id, ALICE)).thenThrow(new RuntimeException("secret detail"));
 
     mockMvc.perform(get("/api/counters/" + id)
-        .with(jwt()))
+        .with(jwt().jwt(j -> j.subject(ALICE))))
       .andExpect(status().isInternalServerError())
       .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
       .andExpect(content().string(not(containsString("secret detail"))));

@@ -11,10 +11,11 @@ import java.util.UUID;
 
 public interface CounterRepository extends JpaRepository<Counter, UUID> {
 
-  List<Counter> findAllByOrderByCreatedAtAsc();
+  Optional<Counter> findByIdAndOwnerId(UUID id, String ownerId);
+
+  List<Counter> findAllByOwnerIdOrderByCreatedAtAsc(String ownerId);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query("select c from Counter c where c.id = :id")
-  Optional<Counter> findByIdForUpdate(UUID id);
-
+  @Query("select c from Counter c where c.id = :id and c.ownerId = :ownerId")
+  Optional<Counter> findByIdForUpdate(UUID id, String ownerId);
 }
