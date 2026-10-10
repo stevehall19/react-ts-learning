@@ -8,6 +8,8 @@ import {
   resetCounter,
 } from './countersApi'
 import type { components } from './api/schema'
+import { userManager } from './auth'
+import type { User } from 'oidc-client-ts'
 
 const sevens: CounterItem = {
   id: '11111111-1111-1111-1111-111111111111',
@@ -49,11 +51,99 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+vi.mock('./auth', () => ({
+  userManager: { getUser: vi.fn(), signinRedirect: vi.fn() },
+}))
+
+function signedInAs(accessToken: string) {
+  vi.mocked(userManager!.getUser).mockResolvedValue({
+    access_token: accessToken,
+  } as User)
+}
+
+function authorizationOf(call: Parameters<typeof fetch>) {
+  return new Headers(call[1]?.headers).get('Authorization')
+}
+
 describe('countersApi', () => {
   test('listCounters returns the parsed counters', async () => {
     mockFetch(new Response(JSON.stringify([sevens]), { status: 200 }))
 
     await expect(listCounters()).resolves.toEqual([sevens])
+  })
+
+  test('a 401 for an expired token starts a sign-in redirect', async () => {
+    vi.mocked(userManager!.getUser).mockResolvedValue({
+      access_token: 'old-token',
+      expired: true,
+    } as User)
+    mockFetch(new Response(null, { status: 401 }))
+
+    await expect(listCounters()).rejects.toMatchObject({ status: 401 })
+
+    expect(userManager!.signinRedirect).toHaveBeenCalledTimes(1)
+  })
+
+  test('a 401 for a token that has not expired does not redirect', async () => {
+    vi.mocked(userManager!.getUser).mockResolvedValue({
+      access_token: 'rejected-token',
+      expired: false,
+    } as User)
+
+    mockFetch(new Response(null, { status: 401 }))
+
+    await expect(listCounters()).rejects.toMatchObject({ status: 401 })
+
+    expect(userManager!.signinRedirect).not.toHaveBeenCalled()
+  })
+
+  test('listCounters sends the access token', async () => {
+    signedInAs('test-token')
+    const fetchSpy = mockFetch(
+      new Response(JSON.stringify([sevens]), { status: 200 }),
+    )
+
+    await listCounters()
+
+    expect(authorizationOf(fetchSpy.mock.calls[0])).toBe('Bearer test-token')
+  })
+
+  test('requests have no Authorization header without a user', async () => {
+    vi.mocked(userManager!.getUser).mockResolvedValue(null)
+    const fetchSpy = mockFetch(
+      new Response(JSON.stringify([sevens]), { status: 200 }),
+    )
+
+    await listCounters()
+
+    expect(authorizationOf(fetchSpy.mock.calls[0])).toBeNull()
+  })
+
+  test('a retried increment sends the current token on each attempt', async () => {
+    vi.useFakeTimers()
+    vi.mocked(userManager!.getUser)
+      .mockResolvedValueOnce({ access_token: 'first-token' } as User)
+      .mockResolvedValueOnce({ access_token: 'renewed-token' } as User)
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(conflict), { status: 409 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ...sevens, count: 7 }), { status: 200 }),
+      )
+
+    const result = expect(incrementCounter(sevens.id)).resolves.toEqual({
+      ...sevens,
+      count: 7,
+    })
+    await vi.advanceTimersByTimeAsync(1000)
+    await result
+
+    expect(fetchSpy.mock.calls.map(authorizationOf)).toEqual([
+      'Bearer first-token',
+      'Bearer renewed-token',
+    ])
   })
 
   test('incrementCounter retries a 409 with the same key', async () => {
