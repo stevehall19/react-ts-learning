@@ -7,7 +7,7 @@ type Realm = {
   users: { username: string; credentials: { type: string; value: string }[] }[]
 }
 
-function passwordFor(username: string): string {
+export function passwordFor(username: string): string {
   const realm = JSON.parse(
     readFileSync('backend/helm/keycloak/realms/counters-realm.json', 'utf8'),
   ) as Realm
@@ -44,9 +44,16 @@ export const test = base.extend<{ token: string }>({
     await provide(access_token)
   },
 
-  // Sent with every request from page and request: the app's /api calls go through Vite's proxy with it.
-  extraHTTPHeaders: async ({ token }, provide) => {
-    await provide({ Authorization: `Bearer ${token}` })
+  // Only the tests' own API calls (the afterEach cleanup) get a password-grant token.
+  // The page signs in through Keycloak like a user (auth.setup.ts), so the app has to
+  // send its own token for the tests to pass.
+  request: async ({ playwright, baseURL, token }, provide) => {
+    const context = await playwright.request.newContext({
+      baseURL,
+      extraHTTPHeaders: { Authorization: `Bearer ${token}` },
+    })
+    await provide(context)
+    await context.dispose()
   },
 })
 
