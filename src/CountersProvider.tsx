@@ -1,9 +1,9 @@
 import { useCounters } from './useCounters'
 import { CountersContext } from './CountersContext'
 import { useRemoteCounters } from './useRemoteCounters'
+import { apiEnabled } from './common'
 
-const useCountersImpl =
-  import.meta.env.VITE_COUNTERS_API === 'true' ? useRemoteCounters : useCounters
+const useCountersImpl = apiEnabled ? useRemoteCounters : useCounters
 
 export function CountersProvider({ children }: { children: React.ReactNode }) {
   const counters = useCountersImpl()

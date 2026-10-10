@@ -24,6 +24,36 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "counters-web",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "redirectUris": ["http://localhost:5173/"],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+      "attributes": {
+          "pkce.code.challenge.method": "S256",
+          "post.logout.redirect.uris": "http://localhost:5173/"
+        },
+      "protocolMappers": [
+        {
+          "name": "counters-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "counters-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
     }
   ],
   "users": [
